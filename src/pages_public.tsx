@@ -15,7 +15,7 @@ export function Landing(){return <div className="min-h-screen">
 <section id="como" className="max-w-6xl mx-auto px-5 py-16"><h2 className="text-3xl font-extrabold">Como funciona?</h2>
 <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">{steps.map(([I,t,d],i)=><Card key={t}><span className="grid place-items-center w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600"><I size={22}/></span><p className="mt-4 text-xs font-bold text-slate-400">ETAPA {i+1}</p><h3 className="font-bold text-lg">{t}</h3><p className="text-slate-600 mt-1">{d}</p></Card>)}</div></section>
 <section className="max-w-6xl mx-auto px-5 pb-20 grid grid-cols-2 md:grid-cols-4 gap-4">{feats.map(([e,t])=><Card key={t} className="text-center"><div className="text-3xl">{e}</div><p className="font-bold mt-2">{t}</p></Card>)}</section>
-<footer className="text-center text-sm text-slate-500 pb-10">Educação Eficiente · Estude melhor. Todos os dias.</footer></div>;}
+<footer className="text-center text-sm text-slate-500 pb-10">OmniLearn · Estude melhor. Todos os dias.</footer></div>;}
 export function Auth({mode}:{mode:'login'|'signup'}){const nav=useNavigate();const l=mode==='login';
  const F=({t,label,type='text'}:{t:string;label:string;type?:string})=><label className="block"><span className="text-sm font-semibold">{label}</span><input id={t} type={type} className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 bg-white"/></label>;
  return <div className="min-h-screen grid place-items-center p-5 bg-gradient-to-b from-indigo-50 to-white"><div className="w-full max-w-md fade"><div className="mb-6 flex justify-center"><Logo/></div>
