@@ -1,0 +1,7 @@
+project_id = "educacao-eficiente"
+
+[functions.generate-questions]
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true
