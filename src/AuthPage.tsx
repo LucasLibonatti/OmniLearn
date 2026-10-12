@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate } from 'react-router-dom';
+import { Sun, Moon } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useAuth } from './auth';
 import { Btn, Card, Logo } from './ui';
+import { useSettings } from './hooks/useSettings';
 
 const Field = (p: { label: string; type?: string; value: string; onChange: (v: string) => void }) => (
   <label className="block">
@@ -18,10 +20,12 @@ const Field = (p: { label: string; type?: string; value: string; onChange: (v: s
 
 export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
   const { session, signInWithGoogle } = useAuth();
+  const { theme, toggleTheme } = useSettings();
   const login = mode === 'login';
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -35,15 +39,30 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setMsg('E-mail ou senha incorretos.');
     } else {
-      const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { name } } });
-      if (error) setMsg(error.message);
-      else if (!data.session) setMsg('Quase lá! Enviamos um e-mail para você confirmar sua conta.');
+      if (!name.trim()) {
+        setMsg('Informe seu nome.');
+      } else if (password.length < 6) {
+        setMsg('A senha precisa ter pelo menos 6 caracteres.');
+      } else if (password !== confirm) {
+        setMsg('As senhas não coincidem.');
+      } else {
+        const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { name: name.trim() } } });
+        if (error) setMsg(error.message);
+        else if (!data.session) setMsg('Conta criada! Enviamos um e-mail para você confirmar. Depois é só entrar.');
+      }
     }
     setBusy(false);
   };
 
   return (
     <div className="min-h-screen grid place-items-center p-5 bg-gradient-to-b from-indigo-50 to-white">
+      <button
+        aria-label={theme === 'dark' ? 'Usar tema claro' : 'Usar tema escuro'}
+        onClick={toggleTheme}
+        className="fixed top-4 right-4 p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+      >
+        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+      </button>
       <div className="w-full max-w-md fade">
         <div className="mb-6 flex justify-center"><Logo /></div>
         <Card className="p-8">
@@ -52,6 +71,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
             {!login && <Field label="Nome" value={name} onChange={setName} />}
             <Field label="E-mail" type="email" value={email} onChange={setEmail} />
             <Field label="Senha (mínimo 6 caracteres)" type="password" value={password} onChange={setPassword} />
+            {!login && <Field label="Repetir senha" type="password" value={confirm} onChange={setConfirm} />}
             {msg && <p role="alert" className="text-sm font-medium text-red-600">{msg}</p>}
             <button
               type="submit"

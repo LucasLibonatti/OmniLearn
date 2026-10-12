@@ -24,6 +24,8 @@ export interface Profile {
   streak: number;
   level: number;
   last_study_date: string | null;
+  avatar_url: string | null;
+  daily_goal: number;
 }
 
 export interface Subject {

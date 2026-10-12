@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Check, X, Clock } from 'lucide-react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Check, X, Clock, Sparkles } from 'lucide-react';
 import { Btn, Bar, Card } from './ui';
 import { EmptyState, ErrorState, Spinner } from './components/states';
 import { useAuth } from './auth';
+import { useSettings } from './hooks/useSettings';
 import { getSubject } from './services/subjects';
 import { completeSession, getSession, recordAnswer, sessionAnsweredIds } from './services/sessions';
+import { explainQuestion } from './services/ai';
 import { selectQuestions } from './engine/adaptive';
+import { playCorrect, playWrong } from './lib/sound';
 import type { Question, SessionRow, Subject } from './types';
 
 const norm = (s: string) =>
@@ -18,8 +21,11 @@ const norm = (s: string) =>
 
 export default function Session() {
   const { id } = useParams();
+  const [params] = useSearchParams();
+  const exam = params.get('exam') === '1';
   const nav = useNavigate();
   const { session: authSession } = useAuth();
+  const { sound } = useSettings();
   const userId = authSession?.user.id;
 
   const [loading, setLoading] = useState(true);
@@ -40,6 +46,9 @@ export default function Session() {
   const [gain, setGain] = useState(0);
   const [bonus, setBonus] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [explain, setExplain] = useState<string | null>(null);
+  const [explaining, setExplaining] = useState(false);
+  const [explainErr, setExplainErr] = useState<string | null>(null);
   const [secs, setSecs] = useState(900);
   const qStart = useRef(Date.now());
 
@@ -103,7 +112,24 @@ export default function Session() {
     setMt({});
     setGain(0);
     setBonus(false);
+    setExplain(null);
+    setExplainErr(null);
+    setExplaining(false);
     qStart.current = Date.now();
+  };
+
+  const askExplain = async () => {
+    const cur = qs[idx];
+    if (!cur) return;
+    setExplaining(true);
+    setExplainErr(null);
+    try {
+      setExplain(await explainQuestion(cur.id));
+    } catch (e) {
+      setExplainErr((e as Error).message);
+    } finally {
+      setExplaining(false);
+    }
   };
 
   const save = async (correct: boolean, attempt: string) => {
@@ -132,6 +158,7 @@ export default function Session() {
           : v === q.answer;
     setSel(v);
     setOk(correct);
+    if (sound && !exam) (correct ? playCorrect : playWrong)();
     setSaving(true);
     await save(correct, v);
     setSaving(false);
@@ -160,6 +187,7 @@ export default function Session() {
 
   const mm = `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
   const q = qs[idx];
+  const revealed = !exam && ok !== null;
 
   if (loading) return <Spinner label="Carregando a sessão…" />;
   if (error) return <div className="max-w-xl mx-auto p-5"><ErrorState message={error} onRetry={() => window.location.reload()} /></div>;
@@ -201,6 +229,7 @@ export default function Session() {
       </div>
 
       <p className="mt-4 text-sm font-semibold text-slate-500">
+        {exam ? '🎓 Modo prova · ' : ''}
         {subject?.name ?? 'Sessão'} · Questão {Math.min(answered + (ok === null ? 1 : 0), total)} de {total} ·{' '}
         <span className="text-amber-600">{xp} XP</span>
       </p>
@@ -210,8 +239,8 @@ export default function Session() {
         <div className="mt-6 grid gap-3 relative">
           {q.type !== 'match' && q.type !== 'short' &&
             (q.options ?? []).map((o, k) => {
-              const right = ok !== null && o === q.answer;
-              const wrong = ok === false && sel === o;
+              const right = revealed && o === q.answer;
+              const wrong = revealed && ok === false && sel === o;
               return (
                 <button
                   key={o}
@@ -274,7 +303,7 @@ export default function Session() {
             </>
           )}
 
-          {ok !== null && (
+          {revealed && (
             <span key={idx} className="xp absolute right-2 -top-6 font-extrabold text-amber-500 text-xl pointer-events-none">
               +{gain} XP{bonus ? ' 🔥' : ''}
             </span>
@@ -282,7 +311,17 @@ export default function Session() {
         </div>
       </div>
 
-      {ok !== null && (
+      {ok !== null && exam && (
+        <Card className="pop mt-4 bg-indigo-50 border-indigo-200">
+          <p className="font-extrabold">✓ Resposta registrada.</p>
+          <p className="text-sm text-slate-600 mt-1">No modo prova você vê o resultado só no final.</p>
+          <Btn className="w-full mt-4" onClick={next} disabled={closing}>
+            {idx + 1 < qs.length ? 'Continuar' : closing ? 'Concluindo…' : 'Ver resultado'}
+          </Btn>
+        </Card>
+      )}
+
+      {ok !== null && !exam && (
         <Card className={`pop mt-4 ${ok ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
           <p className="font-extrabold">{ok ? '✓ Muito bem! Você acertou.' : '✕ Ainda não!'}</p>
           {!ok && (
@@ -291,6 +330,25 @@ export default function Session() {
             </p>
           )}
           <p className="text-sm text-slate-700 mt-1">{q.explanation}</p>
+
+          {!ok && !explain && (
+            <button
+              onClick={askExplain}
+              disabled={explaining}
+              className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+            >
+              <Sparkles size={16} />
+              {explaining ? 'Pensando…' : 'Explique de novo'}
+            </button>
+          )}
+          {explain && (
+            <div className="mt-3 rounded-2xl bg-white/70 border border-indigo-100 p-3">
+              <p className="text-xs font-bold text-indigo-600 mb-1">✨ Explicação da IA</p>
+              <p className="text-sm text-slate-700 whitespace-pre-line">{explain}</p>
+            </div>
+          )}
+          {explainErr && <p className="text-sm text-red-500 mt-2">{explainErr}</p>}
+
           <Btn className="w-full mt-4" onClick={next} disabled={closing}>
             {idx + 1 < qs.length ? (ok ? 'Continuar' : 'Entendi') : closing ? 'Concluindo…' : 'Ver resultado'}
           </Btn>

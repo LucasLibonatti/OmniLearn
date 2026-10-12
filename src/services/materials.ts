@@ -69,6 +69,26 @@ export async function uploadMaterial(userId: string, subjectId: string, file: Fi
   return toMaterial(data as MaterialRow);
 }
 
+/** Cria um material a partir de texto colado (sem upload de arquivo). */
+export async function createTextMaterial(userId: string, subjectId: string, text: string, name = 'Texto colado'): Promise<Material> {
+  const { data, error } = await supabase
+    .from('materials')
+    .insert({
+      user_id: userId,
+      subject_id: subjectId,
+      file_name: name,
+      storage_path: '',
+      pages: 1,
+      status: 'extracted',
+      extracted_text: text,
+      char_count: text.length,
+    })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return toMaterial(data as MaterialRow);
+}
+
 export async function setMaterialExtracted(id: string, pages: number, text: string): Promise<void> {
   const { error } = await supabase
     .from('materials')

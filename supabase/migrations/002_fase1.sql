@@ -202,11 +202,11 @@ begin
       where user_id = v_user and question_id = p_question_id;
   end if;
 
-  update public.sessions set
-    correct = correct + case when p_correct then 1 else 0 end,
-    total = total + 1,
-    xp_gained = xp_gained + v_xp
-  where id = p_session_id;
+  update public.sessions s set
+    correct = s.correct + case when p_correct then 1 else 0 end,
+    total = s.total + 1,
+    xp_gained = s.xp_gained + v_xp
+  where s.id = p_session_id;
 
   return query select v_xp, v_bonus,
     (select s.correct from public.sessions s where s.id = p_session_id),
@@ -226,6 +226,7 @@ declare
   v_yesterday date := v_today - 1;
   v_profile_xp int;
   v_level int;
+  v_masters int;
   v_new_ach jsonb := '[]'::jsonb;
   v_hit boolean;
 begin
@@ -237,17 +238,17 @@ begin
   update public.sessions set finished_at = now() where id = p_session_id;
 
   -- sequência em fuso America/Sao_Paulo
-  select streak, last_study_date into v_streak, v_last from public.profiles where id = v_user;
+  select p.streak, p.last_study_date into v_streak, v_last from public.profiles p where p.id = v_user;
   if v_last is null or v_last < v_yesterday then v_streak := 1;
   elsif v_last = v_yesterday then v_streak := v_streak + 1;
   end if;
-  update public.profiles set
+  update public.profiles p set
     streak = v_streak,
     last_study_date = v_today,
-    xp = xp + v_sxp
-  where id = v_user;
+    xp = p.xp + v_sxp
+  where p.id = v_user;
 
-  select xp into v_profile_xp from public.profiles where id = v_user;
+  select p.xp into v_profile_xp from public.profiles p where p.id = v_user;
   v_level := floor(v_profile_xp / 1000.0)::int + 1;
 
   -- conquistas (avaliadas e concedidas aqui)
@@ -283,7 +284,7 @@ begin
   end if;
 
   -- mestre da matéria (e polímata): matérias com >= 20 respostas e acerto >= 90%
-  select count(*) into v_level from (
+  select count(*) into v_masters from (
     select su.id from public.subjects su
     join public.questions qu on qu.subject_id = su.id
     join public.answers an on an.question_id = qu.id and an.user_id = v_user
@@ -292,12 +293,12 @@ begin
     having count(*) >= 20 and (avg((an.correct)::int) >= 0.9)
   ) as m;
   if not exists (select 1 from public.user_achievements where user_id = v_user and achievement_id = 'subject_master')
-     and v_level >= 1 then
+     and v_masters >= 1 then
     insert into public.user_achievements (user_id, achievement_id) values (v_user, 'subject_master');
     v_new_ach := v_new_ach || jsonb_build_object('id','subject_master','unlocked_at', now());
   end if;
   if not exists (select 1 from public.user_achievements where user_id = v_user and achievement_id = 'subject_master_x3')
-     and v_level >= 3 then
+     and v_masters >= 3 then
     insert into public.user_achievements (user_id, achievement_id) values (v_user, 'subject_master_x3');
     v_new_ach := v_new_ach || jsonb_build_object('id','subject_master_x3','unlocked_at', now());
   end if;

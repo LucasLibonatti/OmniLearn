@@ -1,5 +1,5 @@
-import { useState, type DragEvent } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useEffect, useRef, useState, type DragEvent } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Home,
   BookOpen,
@@ -15,11 +15,21 @@ import {
   Pencil,
   Trash2,
   Archive,
+  Sun,
+  Moon,
+  Volume2,
+  VolumeX,
+  Camera,
+  ScrollText,
+  Printer,
+  Share2,
+  Layers,
 } from 'lucide-react';
-import { Btn, Card, Bar, Ring, Logo, initials } from './ui';
-import { EmptyState, ErrorState, Skeleton, Spinner } from './components/states';
+import { Avatar, Btn, Card, Bar, Ring, Logo } from './ui';
+import { EmptyState, ErrorState, Generating, Skeleton, Spinner } from './components/states';
 import { useAuth } from './auth';
 import { useAsync } from './hooks/useAsync';
+import { useSettings } from './hooks/useSettings';
 import { useProfile, useSubjects } from './hooks/useApp';
 import {
   archiveSubject,
@@ -30,15 +40,19 @@ import {
   listSubjects,
   renameSubject,
 } from './services/subjects';
-import { getProfile, updateProfileName } from './services/profile';
+import { getProfile, updateDailyGoal, updateProfileName, uploadAvatar } from './services/profile';
 import {
   countMaterials,
+  createTextMaterial,
   listMaterials,
   setMaterialError,
   setMaterialExtracted,
   uploadMaterial,
 } from './services/materials';
-import { countQuestions } from './services/questions';
+import { countQuestions, listQuestions } from './services/questions';
+import { gradeFlashcard, reviewQueue, type Flashcard } from './services/flashcards';
+import { summarizeSubject } from './services/ai';
+import { shareText } from './lib/share';
 import { completeSession, getSession, pendingSession, sessionTopicBreakdown, startSession } from './services/sessions';
 import { generateQuestions } from './services/generation';
 import { deleteAccount } from './services/account';
@@ -52,16 +66,56 @@ import type { Material, SubjectWithStats } from './types';
 const nav = [
   { to: '/dashboard', label: 'Início', icon: Home },
   { to: '/materias', label: 'Minhas matérias', icon: BookOpen },
+  { to: '/flashcards', label: 'Flashcards', icon: Layers },
   { to: '/estatisticas', label: 'Estatísticas', icon: BarChart3 },
   { to: '/conquistas', label: 'Conquistas', icon: Trophy },
   { to: '/perfil', label: 'Perfil', icon: User },
 ];
 
+function Switch({ on, onChange, label }: { on: boolean; onChange: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      onClick={onChange}
+      className={`relative w-12 h-7 rounded-full transition shrink-0 ${on ? 'bg-indigo-600' : 'bg-slate-300'}`}
+    >
+      <span
+        className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : ''}`}
+      />
+    </button>
+  );
+}
+
 export function Layout() {
   const { data: profile } = useProfile();
-  const { signOut } = useAuth();
+  const { session, signOut } = useAuth();
+  const { theme, sound, reminder, toggleTheme, toggleSound } = useSettings();
   const loc = useLocation();
+  const today = useAsync(() => (session?.user.id ? statsApi.answeredToday(session.user.id) : Promise.resolve(0)), [session?.user.id]);
   const name = profile?.name ?? 'Estudante';
+  useEffect(() => {
+    if (!reminder) return;
+    const check = () => {
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+      const key = 'omni-reminder-shown';
+      const day = new Date().toDateString();
+      if (localStorage.getItem(key) === day) return;
+      if (new Date().getHours() < 19) return;
+      const goal = profile?.daily_goal ?? 18;
+      const done = today.data ?? 0;
+      if (done >= goal) return;
+      new Notification('Hora de estudar! 📚', {
+        body: done > 0 ? `Você fez ${done} de ${goal} questões hoje. Bora manter a sequência?` : 'Você ainda não estudou hoje. Bora manter a sequência?',
+      });
+      localStorage.setItem(key, day);
+    };
+    check();
+    const t = setInterval(check, 5 * 60 * 1000);
+    return () => clearInterval(t);
+  }, [reminder, profile?.daily_goal, today.data]);
   return (
     <div className="min-h-screen md:pl-64">
       <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 flex-col bg-white border-r border-slate-100 p-5">
@@ -80,21 +134,37 @@ export function Layout() {
             </NavLink>
           ))}
         </nav>
-        <div className="mt-auto flex items-center gap-3">
-          <div className="grid place-items-center w-10 h-10 rounded-full bg-indigo-600 text-white font-bold">
-            {initials(name)}
-          </div>
-          <div className="text-sm min-w-0">
-            <p className="font-semibold truncate">{name}</p>
-            <p className="text-slate-500">Nível {profile?.level ?? 1}</p>
-          </div>
-          <button
-            aria-label="Sair"
-            onClick={() => signOut()}
-            className="ml-auto text-slate-400 hover:text-slate-700 p-2 rounded-xl hover:bg-slate-100"
+        <div className="mt-auto space-y-2">
+          <Link
+            to="/diretrizes"
+            className="flex items-center gap-3 rounded-2xl px-4 py-3 font-medium text-slate-600 hover:bg-slate-50"
           >
-            <LogOut size={18} />
-          </button>
+            <ScrollText size={20} />
+            Diretrizes
+          </Link>
+          <div className="flex items-center gap-3">
+            <Avatar name={name} src={profile?.avatar_url} size={40} />
+            <div className="text-sm min-w-0">
+              <p className="font-semibold truncate">{name}</p>
+              <p className="text-slate-500">Nível {profile?.level ?? 1}</p>
+            </div>
+            <div className="ml-auto flex items-center">
+              <button
+                aria-label={theme === 'dark' ? 'Usar tema claro' : 'Usar tema escuro'}
+                onClick={toggleTheme}
+                className="text-slate-400 hover:text-slate-700 p-2 rounded-xl hover:bg-slate-100"
+              >
+                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+              <button
+                aria-label="Sair"
+                onClick={() => signOut()}
+                className="text-slate-400 hover:text-slate-700 p-2 rounded-xl hover:bg-slate-100"
+              >
+                <LogOut size={18} />
+              </button>
+            </div>
+          </div>
         </div>
       </aside>
       <main key={loc.pathname} className="max-w-5xl mx-auto p-5 md:p-10 pb-28 fade">
@@ -257,7 +327,7 @@ export function Dashboard() {
 
   const name = (profile?.name ?? 'Estudante').split(' ')[0];
   const done = today.data ?? 0;
-  const goal = 18;
+  const goal = profile?.daily_goal ?? 18;
   const streak = profile?.streak ?? 0;
   const breaking = streak > 0 && profile?.last_study_date !== todaySP();
   const subjectsData = subjects.data ?? [];
@@ -395,6 +465,10 @@ export function SubjectPage() {
   const userId = session?.user.id;
   const [generating, setGenerating] = useState(false);
   const [genMsg, setGenMsg] = useState<string | null>(null);
+  const [genStart, setGenStart] = useState<number | null>(null);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [sumBusy, setSumBusy] = useState(false);
+  const [sumErr, setSumErr] = useState<string | null>(null);
 
   const data = useAsync(async () => {
     if (!id) return null;
@@ -412,6 +486,7 @@ export function SubjectPage() {
     if (!id) return;
     setGenerating(true);
     setGenMsg(null);
+    setGenStart(Date.now());
     try {
       const res = await generateQuestions(id);
       setGenMsg(`Pronto! ${res.inserted} questões geradas.`);
@@ -420,6 +495,20 @@ export function SubjectPage() {
       setGenMsg(`Erro: ${(e as Error).message}`);
     } finally {
       setGenerating(false);
+      setGenStart(null);
+    }
+  };
+
+  const doSummary = async () => {
+    if (!id) return;
+    setSumBusy(true);
+    setSumErr(null);
+    try {
+      setSummary(await summarizeSubject(id));
+    } catch (e) {
+      setSumErr((e as Error).message);
+    } finally {
+      setSumBusy(false);
     }
   };
 
@@ -470,9 +559,45 @@ export function SubjectPage() {
             <Sparkles size={16} />
             {generating ? 'Gerando…' : 'Gerar mais questões'}
           </Btn>
+          <Btn v="s" onClick={doSummary} disabled={sumBusy || materials.length === 0}>
+            <Sparkles size={16} />
+            {sumBusy ? 'Resumindo…' : 'Resumo com IA'}
+          </Btn>
+          <Btn v="s" to={`/materias/${subject.id}/flashcards`} disabled={questions === 0}>
+            <Layers size={16} />
+            Flashcards
+          </Btn>
+          <Btn v="s" to={`/materias/${subject.id}/imprimir`} disabled={questions === 0}>
+            <Printer size={16} />
+            Imprimir
+          </Btn>
+          <Btn
+            v="s"
+            onClick={() =>
+              shareText(
+                `Estou estudando ${subject.topic || subject.name} no OmniLearn! ${questions} questões e ${stats?.accuracy ?? 0}% de acerto. 📚`,
+              )
+            }
+          >
+            <Share2 size={16} />
+            Compartilhar
+          </Btn>
         </div>
-        {genMsg && <p className="text-sm mt-3 font-medium text-slate-600">{genMsg}</p>}
+        {genMsg && !generating && <p className="text-sm mt-3 font-medium text-slate-600">{genMsg}</p>}
       </Card>
+
+      {generating && genStart !== null && (
+        <Generating label="Gerando questões com a IA…" startedAt={genStart} />
+      )}
+
+      {(summary || sumBusy || sumErr) && (
+        <Card className="bg-indigo-50 border-indigo-100">
+          <h2 className="font-bold mb-2">✨ Resumo da IA</h2>
+          {sumBusy && <p className="text-sm text-slate-600">Lendo seus materiais e resumindo…</p>}
+          {sumErr && <p className="text-sm text-red-600">{sumErr}</p>}
+          {summary && <p className="text-sm text-slate-700 whitespace-pre-line">{summary}</p>}
+        </Card>
+      )}
 
       <Card>
         <h2 className="font-bold mb-3">Materiais</h2>
@@ -539,7 +664,10 @@ export function NewSubject() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
+  const [genStart, setGenStart] = useState<number | null>(null);
   const [created, setCreated] = useState<string | null>(null);
+  const [mode, setMode] = useState<'file' | 'text'>('file');
+  const [pasted, setPasted] = useState('');
 
   const subjectId = existingId ?? created;
 
@@ -579,37 +707,46 @@ export function NewSubject() {
         sid = s.id;
         setCreated(s.id);
       }
-      const already = await countMaterials(sid);
-      if (already + files.length > 3) throw new Error('Cada matéria aceita no máximo 3 arquivos.');
-      if (!files.length && already === 0) throw new Error('Envie pelo menos um arquivo.');
       if (!sid) throw new Error('Não foi possível criar a matéria.');
+      const already = await countMaterials(sid);
+      const incoming = mode === 'text' ? 1 : files.length;
+      if (already + incoming > 3) throw new Error('Cada matéria aceita no máximo 3 materiais.');
+      if (incoming === 0 && already === 0) throw new Error('Envie um arquivo ou cole um texto.');
 
-      setEntries(files.map((f) => ({ name: f.name, status: 'pending' })));
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        updateEntry(i, { status: 'uploading' });
-        const mat = await uploadMaterial(userId, sid, file);
-        updateEntry(i, { status: 'reading' });
-        try {
-          const ex = await extractText(file);
-          if (ex.empty) {
-            await setMaterialError(mat.id, 'Não conseguimos ler texto suficiente neste arquivo (pode ser escaneado ou só com imagens).');
-            updateEntry(i, { status: 'error', msg: 'Sem texto legível' });
-          } else {
-            await setMaterialExtracted(mat.id, ex.pages, ex.text);
-            updateEntry(i, { status: 'ready' });
+      if (mode === 'text') {
+        if (pasted.trim().length < 200) throw new Error('Cole um texto maior (pelo menos 200 caracteres).');
+        setStatus('Salvando o texto…');
+        await createTextMaterial(userId, sid, pasted.trim(), name.trim() || 'Texto colado');
+      } else {
+        setEntries(files.map((f) => ({ name: f.name, status: 'pending' })));
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          updateEntry(i, { status: 'uploading' });
+          const mat = await uploadMaterial(userId, sid, file);
+          updateEntry(i, { status: 'reading' });
+          try {
+            const ex = await extractText(file);
+            if (ex.empty) {
+              await setMaterialError(mat.id, 'Não conseguimos ler texto suficiente neste arquivo (pode ser escaneado ou só com imagens).');
+              updateEntry(i, { status: 'error', msg: 'Sem texto legível' });
+            } else {
+              await setMaterialExtracted(mat.id, ex.pages, ex.text);
+              updateEntry(i, { status: 'ready' });
+            }
+          } catch (err) {
+            await setMaterialError(mat.id, (err as Error).message);
+            updateEntry(i, { status: 'error', msg: (err as Error).message });
           }
-        } catch (err) {
-          await setMaterialError(mat.id, (err as Error).message);
-          updateEntry(i, { status: 'error', msg: (err as Error).message });
         }
       }
 
-      setStatus('Gerando questões com a IA… isso pode levar de 30 segundos a 2 minutos.');
+      setStatus('Gerando questões com a IA…');
+      setGenStart(Date.now());
       const res = await generateQuestions(sid);
       setStatus(`Tudo pronto! ${res.inserted} questões geradas.`);
       nav2(`/sessao/configurar/${sid}`);
     } catch (e) {
+      setGenStart(null);
       setBusy(false);
       setStatus(`Erro: ${(e as Error).message}`);
     }
@@ -647,20 +784,42 @@ export function NewSubject() {
       )}
 
       <h2 className="font-bold text-lg">Adicione seu material</h2>
-      <label
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e: DragEvent) => {
-          e.preventDefault();
-          add(e.dataTransfer.files);
-        }}
-        className="block cursor-pointer rounded-3xl border-2 border-dashed border-indigo-200 bg-indigo-50/50 p-10 text-center hover:bg-indigo-50 focus-within:outline-2"
-      >
-        <Upload className="mx-auto text-indigo-600" size={32} />
-        <p className="font-bold mt-3">Arraste seus arquivos aqui</p>
-        <p className="text-sm text-slate-500">ou clique para selecionar</p>
-        <p className="text-xs text-slate-400 mt-2">Até 3 arquivos · PDF ou PPTX · até 20 MB cada</p>
-        <input type="file" multiple accept=".pdf,.pptx" className="sr-only" onChange={(e) => add(e.target.files)} />
-      </label>
+      <div className="flex gap-2">
+        {(['file', 'text'] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => setMode(m)}
+            className={`flex-1 rounded-2xl px-4 py-3 font-semibold border-2 ${mode === m ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'}`}
+          >
+            {m === 'file' ? '📎 Enviar arquivo' : '✍️ Colar texto'}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'file' ? (
+        <label
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e: DragEvent) => {
+            e.preventDefault();
+            add(e.dataTransfer.files);
+          }}
+          className="block cursor-pointer rounded-3xl border-2 border-dashed border-indigo-200 bg-indigo-50/50 p-10 text-center hover:bg-indigo-50 focus-within:outline-2"
+        >
+          <Upload className="mx-auto text-indigo-600" size={32} />
+          <p className="font-bold mt-3">Arraste seus arquivos aqui</p>
+          <p className="text-sm text-slate-500">ou clique para selecionar</p>
+          <p className="text-xs text-slate-400 mt-2">Até 3 arquivos · PDF ou PPTX · até 20 MB cada</p>
+          <input type="file" multiple accept=".pdf,.pptx" className="sr-only" onChange={(e) => add(e.target.files)} />
+        </label>
+      ) : (
+        <textarea
+          value={pasted}
+          onChange={(e) => setPasted(e.target.value)}
+          rows={8}
+          placeholder="Cole aqui o texto do seu material (resumo, anotação, capítulo…)."
+          className="w-full rounded-3xl border-2 border-slate-200 px-4 py-4 bg-white"
+        />
+      )}
 
       <p className="text-xs text-slate-500">
         O conteúdo enviado é processado por IA (Google Gemini) para gerar as questões e não deve conter dados pessoais de
@@ -686,9 +845,13 @@ export function NewSubject() {
         </Card>
       ))}
 
-      {status && <p className="text-sm font-medium text-slate-600">{status}</p>}
+      {genStart !== null ? (
+        <Generating label="Gerando questões com a IA…" startedAt={genStart} />
+      ) : (
+        status && <p className="text-sm font-medium text-slate-600">{status}</p>
+      )}
 
-      <Btn disabled={files.length === 0 || busy} onClick={run}>
+      <Btn disabled={(mode === 'text' ? pasted.trim().length < 200 : files.length === 0) || busy} onClick={run}>
         <Sparkles size={18} />
         {busy ? 'Processando…' : existingId ? 'Adicionar e gerar questões' : 'Criar minha sessão'}
       </Btn>
@@ -706,6 +869,7 @@ export function Configure() {
   const nav2 = useNavigate();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [exam, setExam] = useState(false);
   const data = useAsync(async () => {
     if (!subjectId) return null;
     const [subject, questions] = await Promise.all([getSubject(subjectId), countQuestions(subjectId)]);
@@ -720,7 +884,7 @@ export function Configure() {
     setMsg(null);
     try {
       const id = await startSession({ subjectId, mode: 'smart', planned });
-      nav2(`/sessao/${id}`);
+      nav2(`/sessao/${id}${exam ? '?exam=1' : ''}`);
     } catch (e) {
       setMsg(`Erro: ${(e as Error).message}`);
       setBusy(false);
@@ -752,6 +916,20 @@ export function Configure() {
       <Card className="bg-indigo-50 border-indigo-100">
         <p className="font-bold">Aprendizado inteligente</p>
         <p className="text-sm text-slate-600">As perguntas serão adaptadas ao seu desempenho.</p>
+      </Card>
+      <Card>
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={exam}
+            onChange={(e) => setExam(e.target.checked)}
+            className="mt-1 w-5 h-5 accent-indigo-600"
+          />
+          <div>
+            <p className="font-bold">🎓 Modo prova</p>
+            <p className="text-sm text-slate-600">No modo prova você responde sem ver se acertou, como uma prova de verdade. O resultado aparece só no final.</p>
+          </div>
+        </label>
       </Card>
       {questions === 0 && (
         <p className="text-sm text-amber-700">
@@ -1056,9 +1234,14 @@ export function Profile() {
   const { session, signOut } = useAuth();
   const userId = session?.user.id;
   const profile = useProfile();
+  const { theme, sound, reminder, toggleTheme, toggleSound, toggleReminder } = useSettings();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [goalInput, setGoalInput] = useState('');
+  const [savingGoal, setSavingGoal] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   const extra = useAsync(async () => {
@@ -1093,6 +1276,46 @@ export function Profile() {
       setBusy(false);
     }
   };
+  const pickPhoto = async (file: File | undefined) => {
+    if (!file || !userId) return;
+    if (!/^image\//.test(file.type)) {
+      setMsg('Escolha um arquivo de imagem (JPG, PNG…).');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setMsg('A foto deve ter no máximo 5 MB.');
+      return;
+    }
+    setUploading(true);
+    setMsg(null);
+    try {
+      await uploadAvatar(userId, file);
+      await profile.reload();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  };
+  const saveGoal = async () => {
+    if (!userId) return;
+    const n = parseInt(goalInput, 10);
+    if (!n || n < 5 || n > 100) {
+      setMsg('Escolha uma meta entre 5 e 100 questões.');
+      return;
+    }
+    setSavingGoal(true);
+    setMsg(null);
+    try {
+      await updateDailyGoal(userId, n);
+      await profile.reload();
+      setGoalInput('');
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setSavingGoal(false);
+    }
+  };
   const removeAccount = async () => {
     if (!confirm('Excluir sua conta e TODOS os seus dados? Esta ação não pode ser desfeita.')) return;
     if (!confirm('Tem certeza absoluta? Materiais, questões e histórico serão apagados.')) return;
@@ -1111,9 +1334,25 @@ export function Profile() {
     <div className="max-w-xl space-y-4">
       <h1 className="text-3xl font-extrabold">Meu perfil</h1>
       <Card className="text-center">
-        <div className="mx-auto grid place-items-center w-24 h-24 rounded-full bg-indigo-600 text-white text-3xl font-bold">
-          {initials(displayName)}
+        <div className="relative w-24 h-24 mx-auto grid place-items-center">
+          <Avatar name={displayName} src={profile.data?.avatar_url} size={96} />
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            aria-label="Trocar foto"
+            className="absolute -bottom-1 -right-1 grid place-items-center w-9 h-9 rounded-full bg-indigo-600 text-white shadow hover:bg-indigo-700 disabled:opacity-40"
+          >
+            <Camera size={17} />
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={(e) => pickPhoto(e.target.files?.[0])}
+          />
         </div>
+        {uploading && <p className="text-xs text-slate-500 mt-2">Enviando foto…</p>}
         {editing ? (
           <div className="mt-3 flex items-center justify-center gap-2">
             <input
@@ -1152,13 +1391,257 @@ export function Profile() {
         ))}
       </div>
 
+      <Card>
+        <h2 className="font-bold mb-1">Preferências</h2>
+        <div className="flex items-center justify-between gap-3 py-3">
+          <div>
+            <p className="font-medium">Tema escuro</p>
+            <p className="text-sm text-slate-500">Melhor para estudar à noite.</p>
+          </div>
+          <Switch on={theme === 'dark'} onChange={toggleTheme} label="Tema escuro" />
+        </div>
+        <div className="flex items-center justify-between gap-3 py-3 border-t border-slate-100">
+          <div>
+            <p className="font-medium">Sons ao responder</p>
+            <p className="text-sm text-slate-500">Um "plim" no acerto e um "tadam" no erro.</p>
+          </div>
+          <Switch on={sound} onChange={toggleSound} label="Sons ao responder" />
+        </div>
+        <div className="py-3 border-t border-slate-100">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="font-medium">Meta diária de questões</p>
+              <p className="text-sm text-slate-500">Quantas questões você quer resolver por dia?</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <input
+                type="number"
+                min={5}
+                max={100}
+                value={goalInput || String(p?.daily_goal ?? 18)}
+                onChange={(e) => setGoalInput(e.target.value)}
+                className="w-20 rounded-xl border border-slate-200 px-3 py-2 text-center"
+              />
+              <Btn v="s" onClick={saveGoal} disabled={savingGoal}>
+                {savingGoal ? '…' : 'Salvar'}
+              </Btn>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3 py-3 border-t border-slate-100">
+          <div>
+            <p className="font-medium">Lembrete diário</p>
+            <p className="text-sm text-slate-500">Aviso às 19h se você ainda não bateu a meta.</p>
+          </div>
+          <Switch on={reminder} onChange={() => void toggleReminder()} label="Lembrete diário" />
+        </div>
+        <div className="flex items-center justify-between gap-3 py-3 border-t border-slate-100">
+          <div>
+            <p className="font-medium">Diretrizes e termos</p>
+            <p className="text-sm text-slate-500">Regras de uso, IA e privacidade.</p>
+          </div>
+          <Link to="/diretrizes" className="text-sm font-semibold text-indigo-600 shrink-0">
+            Abrir
+          </Link>
+        </div>
+      </Card>
+
       {msg && <p className="text-sm font-medium text-red-600">{msg}</p>}
       <div className="flex flex-wrap gap-2">
         {!editing && <Btn v="s" onClick={startEdit}>Editar perfil</Btn>}
+        <Btn
+          v="s"
+          onClick={() =>
+            shareText(
+              `Estou usando o OmniLearn! 🔥 Sequência de ${p?.streak ?? 0} dias, nível ${p?.level ?? 1} e ${extra.data?.answered ?? 0} questões respondidas. 📚`,
+            )
+          }
+        >
+          <Share2 size={16} /> Compartilhar progresso
+        </Btn>
         <Btn v="s" onClick={removeAccount} disabled={busy}>
           <Trash2 size={16} /> Excluir minha conta e meus dados
         </Btn>
       </div>
+    </div>
+  );
+}
+
+export function Flashcards() {
+  const { id } = useParams();
+  const { session } = useAuth();
+  const userId = session?.user.id;
+  const [idx, setIdx] = useState(0);
+  const [show, setShow] = useState(false);
+  const [result, setResult] = useState<{ box: number; xp_gained: number } | null>(null);
+  const [grading, setGrading] = useState(false);
+  const data = useAsync(() => (userId ? reviewQueue(userId, 20, id) : Promise.resolve<Flashcard[]>([])), [userId, id]);
+  const cards = data.data ?? [];
+  const card = cards[idx];
+
+  const grade = async (correct: boolean) => {
+    if (!card || grading) return;
+    setGrading(true);
+    try {
+      setResult(await gradeFlashcard(card.question.id, correct));
+    } catch {
+      setResult({ box: card.box, xp_gained: 0 });
+    } finally {
+      setGrading(false);
+    }
+  };
+  const next = () => {
+    setShow(false);
+    setResult(null);
+    setIdx((i) => i + 1);
+  };
+
+  if (data.loading) return <Spinner label="Carregando flashcards…" />;
+  if (data.error) return <ErrorState message={data.error} onRetry={data.reload} />;
+
+  if (!card) {
+    return (
+      <div className="max-w-xl">
+        <EmptyState
+          icon="🃏"
+          title={cards.length === 0 ? 'Nenhum flashcard por aqui ainda' : 'Você revisou todos os flashcards de hoje!'}
+          desc={cards.length === 0 ? 'Resolva sessões para os flashcards aparecerem.' : 'Volte amanhã para revisar de novo. 🎉'}
+          action={<Btn to="/dashboard">Voltar ao início</Btn>}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-extrabold">🃏 Flashcards</h1>
+        <span className="text-sm font-semibold text-slate-500">
+          {idx + 1} de {cards.length}
+        </span>
+      </div>
+      <Bar v={((idx + 1) / cards.length) * 100} />
+
+      <Card className="min-h-[220px] flex flex-col justify-center text-center">
+        <p className="text-xs font-bold text-indigo-500 uppercase tracking-wide">{card.question.topic}</p>
+        <h2 className="text-2xl font-extrabold mt-3">{card.question.prompt}</h2>
+        {card.question.options && card.question.options.length > 0 && (
+          <ul className="mt-4 space-y-1 text-slate-600">
+            {card.question.options.map((o) => (
+              <li key={o}>• {o}</li>
+            ))}
+          </ul>
+        )}
+        {show && (
+          <div className="mt-5 fade">
+            <p className="text-sm font-bold text-emerald-600">Resposta</p>
+            <p className="text-lg font-semibold">
+              {card.question.type === 'match'
+                ? (card.question.pairs ?? []).map((p) => p.join(' → ')).join(' · ')
+                : card.question.answer}
+            </p>
+            {card.question.explanation && <p className="text-sm text-slate-600 mt-2">{card.question.explanation}</p>}
+          </div>
+        )}
+      </Card>
+
+      {!show && !result && (
+        <Btn className="w-full" onClick={() => setShow(true)}>
+          Mostrar resposta
+        </Btn>
+      )}
+
+      {show && !result && (
+        <div className="flex gap-3">
+          <Btn v="s" className="flex-1" onClick={() => grade(false)} disabled={grading}>
+            😅 Errei
+          </Btn>
+          <Btn className="flex-1" onClick={() => grade(true)} disabled={grading}>
+            😎 Acertei
+          </Btn>
+        </div>
+      )}
+
+      {result && (
+        <div className="space-y-3">
+          <p className="text-center text-sm font-semibold text-slate-600">
+            {result.xp_gained > 0 ? `+${result.xp_gained} XP · ` : ''}caixa {result.box} de 5
+          </p>
+          <Btn className="w-full" onClick={next}>
+            {idx + 1 < cards.length ? 'Próximo' : 'Concluir'}
+          </Btn>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function PrintSubject() {
+  const { id } = useParams();
+  const data = useAsync(async () => {
+    if (!id) return null;
+    const [subject, questions] = await Promise.all([getSubject(id), listQuestions(id)]);
+    return { subject, questions };
+  }, [id]);
+
+  if (data.loading) return <Spinner label="Preparando impressão…" />;
+  if (data.error) return <ErrorState message={data.error} onRetry={data.reload} />;
+  if (!data.data?.subject) return <EmptyState title="Matéria não encontrada" action={<Btn to="/materias">Voltar</Btn>} />;
+
+  const { subject, questions } = data.data;
+
+  return (
+    <div className="max-w-3xl mx-auto p-6 text-slate-900">
+      <div className="flex items-center justify-between mb-6 no-print">
+        <Btn to={`/materias/${subject.id}`} v="s">
+          Voltar
+        </Btn>
+        <Btn onClick={() => window.print()}>
+          <Printer size={16} /> Imprimir / salvar PDF
+        </Btn>
+      </div>
+      <h1 className="text-2xl font-extrabold">{subject.name}</h1>
+      <p className="text-sm text-slate-500 mb-6">
+        {subject.topic || ''} · {questions.length} questões
+      </p>
+
+      <ol className="space-y-6">
+        {questions.map((q, i) => (
+          <li key={q.id} className="break-inside-avoid">
+            <p className="font-semibold">
+              {i + 1}. {q.prompt}
+            </p>
+            {q.type === 'multiple' && q.options && (
+              <ul className="mt-2 ml-4 space-y-1">
+                {q.options.map((o, k) => (
+                  <li key={o}>
+                    {'ABCD'.charAt(k)}) {o}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {q.type === 'match' && q.pairs && (
+              <ul className="mt-2 ml-4 space-y-1">
+                {q.pairs.map(([a, b]) => (
+                  <li key={a}>
+                    {a} → ____________ ({b})
+                  </li>
+                ))}
+              </ul>
+            )}
+            {q.type === 'short' && <div className="mt-2 ml-4">Resposta: ______________________________</div>}
+          </li>
+        ))}
+      </ol>
+
+      <h2 className="text-xl font-extrabold mt-10 mb-3">Gabarito</h2>
+      <ol className="space-y-2">
+        {questions.map((q, i) => (
+          <li key={q.id}>
+            {i + 1}. {q.type === 'match' ? (q.pairs ?? []).map((p) => p.join(' → ')).join(' · ') : q.answer}
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }

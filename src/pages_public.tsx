@@ -1,5 +1,7 @@
-import { Upload, Sparkles, Timer, TrendingUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Upload, Sparkles, Timer, TrendingUp, Sun, Moon } from 'lucide-react';
 import { Btn, Card, Logo } from './ui';
+import { useSettings } from './hooks/useSettings';
 
 const steps = [
   [Upload, 'Envie seus materiais', 'Adicione de 1 a 3 slides ou arquivos da matéria.'],
@@ -16,11 +18,19 @@ const feats = [
 ];
 
 export function Landing() {
+  const { theme, toggleTheme } = useSettings();
   return (
     <div className="min-h-screen">
       <header className="max-w-6xl mx-auto flex items-center justify-between p-5">
         <Logo />
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            aria-label={theme === 'dark' ? 'Usar tema claro' : 'Usar tema escuro'}
+            onClick={toggleTheme}
+            className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+          >
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
           <Btn to="/login" v="s">
             Entrar
           </Btn>
@@ -93,7 +103,12 @@ export function Landing() {
           </Card>
         ))}
       </section>
-      <footer className="text-center text-sm text-slate-500 pb-10">OmniLearn · Estude melhor. Todos os dias.</footer>
+      <footer className="text-center text-sm text-slate-500 pb-10">
+        OmniLearn · Estude melhor. Todos os dias. ·{' '}
+        <Link to="/diretrizes" className="font-semibold text-indigo-600">
+          Diretrizes
+        </Link>
+      </footer>
     </div>
   );
 }

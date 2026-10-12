@@ -5,6 +5,7 @@
 //   GEMINI_API_KEY            (obrigatório)
 //   GEMINI_MODEL              (opcional; padrão: gemini-3.8-flash)
 //   DAILY_GENERATION_LIMIT    (opcional; padrão: 5 gerações por usuário por dia)
+//   UNLIMITED_USERS           (opcional; e-mails e/ou IDs separados por vírgula que NÃO têm limite)
 //
 // SUPABASE_URL, SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY são injetados automaticamente.
 
@@ -200,6 +201,12 @@ Deno.serve(async (req: Request) => {
   const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
   const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') || 'gemini-3.8-flash';
   const LIMIT = Number(Deno.env.get('DAILY_GENERATION_LIMIT') || '5');
+  const UNLIMITED = new Set(
+    (Deno.env.get('UNLIMITED_USERS') || '')
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
+  );
 
   if (!SUPABASE_URL || !ANON_KEY || !SERVICE_KEY) {
     return json({ error: 'Configuração do servidor incompleta.' }, 500);
@@ -247,7 +254,8 @@ Deno.serve(async (req: Request) => {
     .select('id', { count: 'exact', head: true })
     .eq('user_id', user.id)
     .gte('created_at', startOfDay);
-  if ((usedToday ?? 0) >= LIMIT) {
+  const isUnlimited = UNLIMITED.has((user.email ?? '').toLowerCase()) || UNLIMITED.has(user.id.toLowerCase());
+  if (!isUnlimited && (usedToday ?? 0) >= LIMIT) {
     return json({ error: `Você atingiu o limite de ${LIMIT} gerações por dia. Tente novamente amanhã.` }, 429);
   }
 

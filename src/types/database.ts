@@ -5,6 +5,8 @@ export interface ProfileRow {
   xp: number | null;
   streak: number | null;
   last_study_date: string | null;
+  avatar_url: string | null;
+  daily_goal: number | null;
   created_at: string | null;
 }
 

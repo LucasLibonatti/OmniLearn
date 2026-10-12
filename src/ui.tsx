@@ -86,3 +86,29 @@ export function initials(name: string): string {
   if (!parts.length) return '?';
   return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
 }
+
+export function Avatar({
+  name,
+  src,
+  size = 40,
+  className = '',
+}: {
+  name: string;
+  src?: string | null;
+  size?: number;
+  className?: string;
+}) {
+  const style = { width: size, height: size };
+  if (src) {
+    return <img src={src} alt={name} style={style} className={`rounded-full object-cover bg-slate-100 ${className}`} />;
+  }
+  return (
+    <div
+      aria-hidden
+      style={style}
+      className={`grid place-items-center rounded-full bg-indigo-600 text-white font-bold ${className}`}
+    >
+      {initials(name)}
+    </div>
+  );
+}
