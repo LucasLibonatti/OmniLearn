@@ -3,7 +3,7 @@
 //
 // Secrets esperados:
 //   GEMINI_API_KEY            (obrigatório)
-//   GEMINI_MODEL              (opcional; padrão: gemini-3.8-flash)
+//   GEMINI_MODEL              (opcional; padrão: gemini-3.5-flash)
 //   DAILY_GENERATION_LIMIT    (opcional; padrão: 5 gerações por usuário por dia)
 //   UNLIMITED_USERS           (opcional; e-mails e/ou IDs separados por vírgula que NÃO têm limite)
 //
@@ -199,7 +199,7 @@ Deno.serve(async (req: Request) => {
   const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
   const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-  const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') || 'gemini-3.8-flash';
+  const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') || 'gemini-3.5-flash';
   const LIMIT = Number(Deno.env.get('DAILY_GENERATION_LIMIT') || '5');
   const UNLIMITED = new Set(
     (Deno.env.get('UNLIMITED_USERS') || '')
@@ -283,23 +283,41 @@ Deno.serve(async (req: Request) => {
   const prompt = buildPrompt(subject.name ?? 'Matéria', subject.topic ?? '', content, quantity);
 
   try {
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            responseSchema: RESPONSE_SCHEMA,
-          },
-        }),
-      },
-    );
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    let geminiRes: Response | null = null;
+    let lastStatus = 0;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              responseSchema: RESPONSE_SCHEMA,
+            },
+          }),
+        },
+      );
+      if (geminiRes.ok) break;
+      lastStatus = geminiRes.status;
+      if (lastStatus === 503) {
+        await sleep(1200 * Math.pow(2, attempt) + Math.random() * 800);
+        continue;
+      }
+      if (lastStatus === 429) {
+        const errText = await geminiRes.text().catch(() => '');
+        if (/perday/i.test(errText)) break;
+        await sleep(1200 * Math.pow(2, attempt) + Math.random() * 800);
+        continue;
+      }
+      break;
+    }
 
-    if (!geminiRes.ok) {
-      const status = geminiRes.status;
+    if (!geminiRes || !geminiRes.ok) {
+      const status = lastStatus;
       await admin.from('materials').update({ status: 'error', error_message: 'A IA não conseguiu gerar as questões.' }).eq('subject_id', subjectId).eq('user_id', user.id);
       if (logId) await admin.from('generation_log').update({ status: 'error' }).eq('id', logId);
       if (status === 429) {

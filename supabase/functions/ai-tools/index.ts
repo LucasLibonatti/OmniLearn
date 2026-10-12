@@ -39,8 +39,17 @@ async function callGemini(prompt: string, key: string, model: string): Promise<s
       throw new Error('empty');
     }
     lastStatus = res.status;
-    if (res.status !== 429 && res.status !== 503) break;
-    await sleep(1200 * Math.pow(2, attempt) + Math.random() * 800);
+    if (res.status === 503) {
+      await sleep(1200 * Math.pow(2, attempt) + Math.random() * 800);
+      continue;
+    }
+    if (res.status === 429) {
+      const errText = await res.text().catch(() => '');
+      if (/perday/i.test(errText)) break;
+      await sleep(1200 * Math.pow(2, attempt) + Math.random() * 800);
+      continue;
+    }
+    break;
   }
   throw new Error('gemini ' + lastStatus);
 }
@@ -53,7 +62,7 @@ Deno.serve(async (req: Request) => {
   const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
   const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-  const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') || 'gemini-3.8-flash';
+  const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') || 'gemini-3.5-flash';
   if (!SUPABASE_URL || !ANON_KEY || !SERVICE_KEY || !GEMINI_API_KEY) {
     return json({ error: 'Serviço indisponível no momento.' }, 500);
   }
