@@ -22,55 +22,85 @@ function base(s: SubjectRow): Subject {
   return { id: s.id, name: s.name, topic: s.topic, tone: s.tone, archived: !!s.archived };
 }
 
-async function subjectStats(userId: string, subjectId: string): Promise<SubjectStats> {
-  const { count: questions } = await supabase
+const EMPTY_STATS: SubjectStats = { questions: 0, answered: 0, accuracy: 0, progress: 0, last_session: null, streak: 0 };
+
+/** Estatísticas de várias matérias com um número fixo de consultas (evita N+1). */
+async function subjectStatsBatch(userId: string, subjectIds: string[]): Promise<Map<string, SubjectStats>> {
+  const result = new Map<string, SubjectStats>();
+  if (!subjectIds.length) return result;
+
+  const { data: qRows, error: qErr } = await supabase
     .from('questions')
-    .select('id', { count: 'exact', head: true })
-    .eq('subject_id', subjectId);
+    .select('id,subject_id')
+    .in('subject_id', subjectIds);
+  if (qErr) throw qErr;
+  type QRow = { id: string; subject_id: string };
+  const questions = (qRows ?? []) as QRow[];
+  const qidsBySubject = new Map<string, string[]>();
+  const subjectByQid = new Map<string, string>();
+  for (const q of questions) {
+    qidsBySubject.set(q.subject_id, [...(qidsBySubject.get(q.subject_id) ?? []), q.id]);
+    subjectByQid.set(q.id, q.subject_id);
+  }
+  const allQids = questions.map((q) => q.id);
 
-  const { data: qRows } = await supabase.from('questions').select('id').eq('subject_id', subjectId);
-  const qids = ((qRows ?? []) as { id: string }[]).map((q) => q.id);
-
-  const { count: answered } = qids.length
-    ? await supabase
-        .from('answers')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .in('question_id', qids)
-    : { count: 0 };
-
-  const { data: recent } = qids.length
-    ? await supabase
-        .from('answers')
-        .select('correct,answered_at')
-        .eq('user_id', userId)
-        .in('question_id', qids)
-        .order('answered_at', { ascending: false })
-        .limit(50)
-    : { data: [] };
-  const rows = (recent ?? []) as { correct: boolean; answered_at: string }[];
-
-  let progress = 0;
-  let accuracy = 0;
-  if (rows.length) {
-    const weights = rows.map((_, i) => rows.length - i);
-    const wsum = weights.reduce((a, b) => a + b, 0);
-    progress = Math.round((rows.reduce((acc, r, i) => acc + (r.correct ? weights[i] : 0), 0) / wsum) * 100);
-    accuracy = Math.round((rows.filter((r) => r.correct).length / rows.length) * 100);
+  const answersBySubject = new Map<string, { correct: boolean; answered_at: string }[]>();
+  if (allQids.length) {
+    const { data: aRows, error: aErr } = await supabase
+      .from('answers')
+      .select('question_id,correct,answered_at')
+      .eq('user_id', userId)
+      .in('question_id', allQids);
+    if (aErr) throw aErr;
+    for (const a of (aRows ?? []) as { question_id: string; correct: boolean; answered_at: string }[]) {
+      const sid = subjectByQid.get(a.question_id);
+      if (!sid) continue;
+      answersBySubject.set(sid, [...(answersBySubject.get(sid) ?? []), { correct: a.correct, answered_at: a.answered_at }]);
+    }
   }
 
-  const { data: sess } = await supabase
+  const { data: sRows, error: sErr } = await supabase
     .from('sessions')
-    .select('started_at,finished_at')
+    .select('subject_id,started_at,finished_at')
     .eq('user_id', userId)
-    .eq('subject_id', subjectId)
-    .order('started_at', { ascending: false })
-    .limit(60);
-  const sessions = (sess ?? []) as { started_at: string; finished_at: string | null }[];
-  const last_session = sessions.length ? sessions[0].started_at : null;
-  const streak = streakFromDates(sessions.filter((s) => s.finished_at).map((s) => spDate(s.started_at)));
+    .in('subject_id', subjectIds)
+    .order('started_at', { ascending: false });
+  if (sErr) throw sErr;
+  const sessionsBySubject = new Map<string, { started_at: string; finished_at: string | null }[]>();
+  for (const s of (sRows ?? []) as { subject_id: string; started_at: string; finished_at: string | null }[]) {
+    if (!s.subject_id) continue;
+    sessionsBySubject.set(s.subject_id, [
+      ...(sessionsBySubject.get(s.subject_id) ?? []),
+      { started_at: s.started_at, finished_at: s.finished_at },
+    ]);
+  }
 
-  return { questions: questions ?? 0, answered: answered ?? 0, accuracy, progress, last_session, streak };
+  for (const sid of subjectIds) {
+    const qids = qidsBySubject.get(sid) ?? [];
+    const all = (answersBySubject.get(sid) ?? []).slice().sort((a, b) => (a.answered_at < b.answered_at ? 1 : -1));
+    const recent = all.slice(0, 50);
+
+    let progress = 0;
+    let accuracy = 0;
+    if (recent.length) {
+      const weights = recent.map((_, i) => recent.length - i);
+      const wsum = weights.reduce((a, b) => a + b, 0);
+      progress = Math.round((recent.reduce((acc, r, i) => acc + (r.correct ? weights[i] : 0), 0) / wsum) * 100);
+      accuracy = Math.round((recent.filter((r) => r.correct).length / recent.length) * 100);
+    }
+
+    const sessions = (sessionsBySubject.get(sid) ?? []).slice(0, 60);
+    const last_session = sessions.length ? sessions[0].started_at : null;
+    const streak = streakFromDates(sessions.filter((s) => s.finished_at).map((s) => spDate(s.started_at)));
+
+    result.set(sid, { questions: qids.length, answered: all.length, accuracy, progress, last_session, streak });
+  }
+  return result;
+}
+
+async function subjectStats(userId: string, subjectId: string): Promise<SubjectStats> {
+  const map = await subjectStatsBatch(userId, [subjectId]);
+  return map.get(subjectId) ?? EMPTY_STATS;
 }
 
 export async function listSubjects(userId: string): Promise<SubjectWithStats[]> {
@@ -82,7 +112,9 @@ export async function listSubjects(userId: string): Promise<SubjectWithStats[]> 
     .order('created_at', { ascending: false });
   if (error) throw error;
   const subjects = (data ?? []) as SubjectRow[];
-  return Promise.all(subjects.map(async (s) => ({ ...base(s), ...(await subjectStats(userId, s.id)) })));
+  if (!subjects.length) return [];
+  const stats = await subjectStatsBatch(userId, subjects.map((s) => s.id));
+  return subjects.map((s) => ({ ...base(s), ...(stats.get(s.id) ?? EMPTY_STATS) }));
 }
 
 export async function getSubject(id: string): Promise<Subject | null> {

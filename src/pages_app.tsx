@@ -58,7 +58,6 @@ import { generateQuestions } from './services/generation';
 import { deleteAccount } from './services/account';
 import * as statsApi from './services/stats';
 import { listAchievements, newlyUnlocked } from './services/achievements';
-import { extractText } from './lib/extract';
 import { formatDate, greeting, lastNDates, shortAgo, todaySP, weekLabel } from './lib/dates';
 import { xpInLevel, XP_PER_LEVEL } from './engine/xp';
 import type { Material, SubjectWithStats } from './types';
@@ -719,6 +718,7 @@ export function NewSubject() {
         await createTextMaterial(userId, sid, pasted.trim(), name.trim() || 'Texto colado');
       } else {
         setEntries(files.map((f) => ({ name: f.name, status: 'pending' })));
+        const { extractText } = await import('./lib/extract');
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
           updateEntry(i, { status: 'uploading' });

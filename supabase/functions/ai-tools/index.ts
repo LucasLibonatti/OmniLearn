@@ -1,5 +1,5 @@
 // Edge Function: resumo de matéria e explicação de questão via Gemini.
-// Secrets: GEMINI_API_KEY (obrigatório), GEMINI_MODEL (opcional).
+// Secrets: GEMINI_API_KEY (obrigatório), GEMINI_MODEL (opcional), AI_DAILY_LIMIT (opcional; padrão: 30/dia).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -63,6 +63,7 @@ Deno.serve(async (req: Request) => {
   const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
   const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') || 'gemini-3.5-flash';
+  const AI_DAILY_LIMIT = Number(Deno.env.get('AI_DAILY_LIMIT') || '30');
   if (!SUPABASE_URL || !ANON_KEY || !SERVICE_KEY || !GEMINI_API_KEY) {
     return json({ error: 'Serviço indisponível no momento.' }, 500);
   }
@@ -85,6 +86,18 @@ Deno.serve(async (req: Request) => {
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
   try {
+    // Limite diário de chamadas à IA (controle de custo/abuso).
+    const startOfDay = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00-03:00').toISOString();
+    const { count: usedToday } = await admin
+      .from('ai_log')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', startOfDay);
+    if ((usedToday ?? 0) >= AI_DAILY_LIMIT) {
+      return json({ error: `Você atingiu o limite de ${AI_DAILY_LIMIT} usos da IA por dia. Tente novamente amanhã.` }, 429);
+    }
+    await admin.from('ai_log').insert({ user_id: user.id, action: body.action ?? 'unknown' });
+
     if (body.action === 'summary') {
       if (!body.subject_id) return json({ error: 'Informe a matéria.' }, 400);
       const { data: subject } = await admin
