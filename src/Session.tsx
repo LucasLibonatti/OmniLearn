@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Check, X, Clock, Sparkles } from 'lucide-react';
-import { Btn, Bar, Card } from './ui';
+import { Btn, Bar, Card, Select } from './ui';
+import { shuffle } from './lib/shuffle';
 import { EmptyState, ErrorState, Spinner } from './components/states';
 import { useAuth } from './auth';
 import { useSettings } from './hooks/useSettings';
@@ -189,6 +190,12 @@ export default function Session() {
   const q = qs[idx];
   const revealed = !exam && ok !== null;
 
+  const options = useMemo(() => shuffle(q?.options ?? []), [q?.id]);
+  const matchOptions = useMemo(
+    () => (q?.type === 'match' ? shuffle((q.pairs ?? []).map(([, b]) => b)) : []),
+    [q?.id],
+  );
+
   if (loading) return <Spinner label="Carregando a sessão…" />;
   if (error) return <div className="max-w-xl mx-auto p-5"><ErrorState message={error} onRetry={() => window.location.reload()} /></div>;
   if (!sess) return null;
@@ -238,7 +245,7 @@ export default function Session() {
         <h1 className="text-2xl font-extrabold mt-4">{q.prompt}</h1>
         <div className="mt-6 grid gap-3 relative">
           {q.type !== 'match' && q.type !== 'short' &&
-            (q.options ?? []).map((o, k) => {
+            options.map((o, k) => {
               const right = revealed && o === q.answer;
               const wrong = revealed && ok === false && sel === o;
               return (
@@ -261,20 +268,14 @@ export default function Session() {
               {(q.pairs ?? []).map(([a]) => (
                 <div key={a} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3">
                   <span className="font-semibold w-32">{a}</span>
-                  <select
-                    aria-label={a}
+                  <Select
+                    ariaLabel={a}
                     disabled={ok !== null}
                     value={mt[a] ?? ''}
-                    onChange={(e) => setMt({ ...mt, [a]: e.target.value })}
-                    className="flex-1 rounded-xl border border-slate-200 p-2"
-                  >
-                    <option value="">Escolha…</option>
-                    {(q.pairs ?? []).map(([, b]) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => setMt({ ...mt, [a]: v })}
+                    options={matchOptions}
+                    className="flex-1 min-w-0"
+                  />
                 </div>
               ))}
               {ok === null && (

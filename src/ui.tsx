@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap } from 'lucide-react';
+import { ChevronDown, GraduationCap } from 'lucide-react';
 
 export const Card = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
   <div className={`rounded-3xl bg-white border border-slate-100 shadow-sm p-5 ${className}`}>{children}</div>
@@ -46,6 +46,95 @@ export const Bar = ({ v, color = 'bg-indigo-600' }: { v: number; color?: string 
     <div className={`h-full rounded-full transition-all duration-700 ${color}`} style={{ width: `${Math.max(0, Math.min(100, v))}%` }} />
   </div>
 );
+
+export function Select({
+  value,
+  onChange,
+  options,
+  placeholder = 'Escolha…',
+  ariaLabel,
+  disabled,
+  className = '',
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  placeholder?: string;
+  ariaLabel?: string;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const choose = (v: string) => {
+    onChange(v);
+    setOpen(false);
+  };
+
+  return (
+    <div ref={ref} className={`relative ${className}`}>
+      <button
+        type="button"
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        disabled={disabled}
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-2 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-left font-medium text-slate-700 transition hover:border-indigo-400 focus:outline-none disabled:opacity-50"
+      >
+        <span className={`truncate ${value ? '' : 'text-slate-400'}`}>{value || placeholder}</span>
+        <ChevronDown size={18} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <ul
+          role="listbox"
+          className="absolute z-30 mt-2 w-full max-h-60 overflow-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10"
+        >
+          <li role="option" aria-selected={value === ''}>
+            <button
+              type="button"
+              onClick={() => choose('')}
+              className={`w-full text-left rounded-lg px-3 py-2.5 text-sm text-slate-400 transition hover:bg-slate-100 ${value === '' ? 'bg-slate-100' : ''}`}
+            >
+              {placeholder}
+            </button>
+          </li>
+          {options.map((o) => (
+            <li key={o} role="option" aria-selected={value === o}>
+              <button
+                type="button"
+                onClick={() => choose(o)}
+                className={`w-full text-left rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                  value === o ? 'bg-indigo-600 text-white' : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                {o}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export const Ring = ({ v, size = 150 }: { v: number; size?: number }) => {
   const r = size / 2 - 10;
