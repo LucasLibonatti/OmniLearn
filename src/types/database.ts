@@ -1,4 +1,4 @@
-// Tipos das linhas do banco (Supabase/PostgreSQL). Ver supabase/migrations/002_fase1.sql.
+// Tipos das linhas do banco (Supabase/PostgreSQL). Ver supabase/migrations/000_full_schema.sql.
 export interface ProfileRow {
   id: string;
   name: string | null;
