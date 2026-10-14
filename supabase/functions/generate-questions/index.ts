@@ -1,4 +1,4 @@
-// Edge Function: gera questões a partir do texto extraído usando a API da Groq (Llama 3).
+// Edge Function: gera questões focadas em fixação e aprendizado a partir do texto extraído usando a Groq.
 // Secrets necessários: GROQ_API_KEY
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -128,20 +128,22 @@ function balancedTruncate(texts: string[]): string {
 
 function buildPrompt(subjectName: string, subjectTopic: string, content: string, quantity: number): string {
   return [
-    'Você é um professor brasileiro que cria exercícios de revisão a partir do material de estudo de um aluno.',
-    'Responda EXCLUSIVAMENTE em formato JSON puro, seguindo este formato estruturado:',
-    '{"questions": [{"type": "multiple", "topic": "Assunto", "prompt": "Enunciado", "options": ["A", "B", "C", "D"], "answer": "A", "explanation": "Explicação", "difficulty": 2}]}',
+    'Você é um tutor especialista em metodologias de estudo ativo, repetição espaçada e memorização.',
+    'Seu objetivo principal é criar um conjunto de exercícios de alta eficácia pedagógica voltados EXCLUSIVAMENTE para fazer o aluno fixar e memorizar o conteúdo exato do slide fornecido abaixo.',
+    'Responda EXCLUSIVAMENTE em formato JSON puro, seguindo rigorosamente esta estrutura de dados:',
+    '{"questions": [{"type": "multiple", "topic": "Tópico Específico", "prompt": "Enunciado focado em um conceito-chave do material", "options": ["A", "B", "C", "D"], "answer": "Resposta correta exata", "explanation": "Explicação pedagógica detalhada que ensina o conceito e reforça a matéria do slide", "difficulty": 2}]}',
     '',
     `Matéria: ${subjectName}${subjectTopic ? ` — ${subjectTopic}` : ''}.`,
-    `Gere ${quantity} questões em português do Brasil, baseadas EXCLUSIVAMENTE no material abaixo.`,
+    `Gere exatamente ${quantity} questões pedagógicas em português do Brasil, estruturadas para fixação de conteúdo.`,
     '',
-    'Regras obrigatórias:',
-    '- Não invente fatos que não estejam no material.',
-    '- Use de 3 a 8 assuntos curtos e reutilizáveis no campo "topic".',
-    '- Misture os tipos: multiple, tf, fill, match, short.',
-    '- Cada questão deve ter "explanation" e "difficulty" (1 a 3).',
+    'Diretrizes estritas para a fixação do aluno:',
+    '- Foque nos conceitos centrais, definições importantes, termos técnicos ou etapas apresentadas no slide.',
+    '- Evite perguntas genéricas; pergunte sobre fatos, regras ou conceitos específicos que estão escritos ou implícitos no texto do material.',
+    '- O campo "explanation" é a parte mais importante: ele deve explicar o conceito de forma simples e direta, ensinando o aluno o porquê da resposta correta para que ele aprenda a matéria.',
+    '- Varie os tipos de questões (como múltipla escolha, verdadeiro/falso ou preenchimento de lacunas) para estimular diferentes formas de memorização.',
+    '- Baseie-se 100% no texto do material abaixo. Não invente nada fora do escopo do slide.',
     '',
-    '--- MATERIAL ---',
+    '--- MATERIAL (SLIDE) ---',
     content,
     '--- FIM DO MATERIAL ---',
   ].join('\n');
@@ -249,6 +251,7 @@ Deno.serve(async (req: Request) => {
           messages: [{ role: 'user', content: prompt }],
           response_format: { type: 'json_object' },
           temperature: 0.7,
+          max_tokens: 32768,
         }),
       },
     );
