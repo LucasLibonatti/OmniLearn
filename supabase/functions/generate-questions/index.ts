@@ -282,9 +282,9 @@ Deno.serve(async (req: Request) => {
   const content = balancedTruncate(withText.map((m) => m.extracted_text as string));
   const prompt = buildPrompt(subject.name ?? 'Matéria', subject.topic ?? '', content, quantity);
 
-  try {
+ try {
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
