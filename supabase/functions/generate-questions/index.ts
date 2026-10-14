@@ -3,7 +3,7 @@
 //
 // Secrets esperados:
 //   GEMINI_API_KEY            (obrigatório)
-//   GEMINI_MODEL              (opcional; padrão: gemini-3.5-flash)
+//   GEMINI_MODEL              (opcional; padrão: gemini-2.5-flash)
 //   DAILY_GENERATION_LIMIT    (opcional; padrão: 5 gerações por usuário por dia)
 //   UNLIMITED_USERS           (opcional; e-mails e/ou IDs separados por vírgula que NÃO têm limite)
 //
@@ -282,7 +282,7 @@ Deno.serve(async (req: Request) => {
   const content = balancedTruncate(withText.map((m) => m.extracted_text as string));
   const prompt = buildPrompt(subject.name ?? 'Matéria', subject.topic ?? '', content, quantity);
 
- try {
+  try {
     const geminiRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
       {
@@ -298,14 +298,15 @@ Deno.serve(async (req: Request) => {
       },
     );
 
-    if (!geminiRes || !geminiRes.ok) {
-      const status = lastStatus;
+    if (!geminiRes.ok) {
+      const errText = await geminiRes.text().catch(() => '');
       await admin.from('materials').update({ status: 'error', error_message: 'A IA não conseguiu gerar as questões.' }).eq('subject_id', subjectId).eq('user_id', user.id);
       if (logId) await admin.from('generation_log').update({ status: 'error' }).eq('id', logId);
-      if (status === 429) {
+      
+      if (geminiRes.status === 429) {
         return json({ error: 'Muitas gerações agora. Aguarde alguns minutos e tente de novo.' }, 429);
       }
-      return json({ error: 'Não foi possível gerar as questões agora. Tente novamente em instantes.' }, 502);
+      return json({ error: `Erro na API do Gemini (${geminiRes.status}): ${errText}` }, 502);
     }
 
     const geminiJson = await geminiRes.json();
