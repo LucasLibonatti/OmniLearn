@@ -284,23 +284,20 @@ Deno.serve(async (req: Request) => {
 
   try {
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    let geminiRes: Response | null = null;
-    let lastStatus = 0;
-    for (let attempt = 0; attempt < 5; attempt++) {
-      geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              responseSchema: RESPONSE_SCHEMA,
-            },
-          }),
-        },
-      );
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: RESPONSE_SCHEMA,
+          },
+        }),
+      },
+    );
       if (geminiRes.ok) break;
       lastStatus = geminiRes.status;
       if (lastStatus === 503) {
