@@ -282,8 +282,7 @@ Deno.serve(async (req: Request) => {
   const content = balancedTruncate(withText.map((m) => m.extracted_text as string));
   const prompt = buildPrompt(subject.name ?? 'Matéria', subject.topic ?? '', content, quantity);
 
-  try {
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+ try {
     const geminiRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
       {
@@ -298,20 +297,6 @@ Deno.serve(async (req: Request) => {
         }),
       },
     );
-      if (geminiRes.ok) break;
-      lastStatus = geminiRes.status;
-      if (lastStatus === 503) {
-        await sleep(1200 * Math.pow(2, attempt) + Math.random() * 800);
-        continue;
-      }
-      if (lastStatus === 429) {
-        const errText = await geminiRes.text().catch(() => '');
-        if (/perday/i.test(errText)) break;
-        await sleep(1200 * Math.pow(2, attempt) + Math.random() * 800);
-        continue;
-      }
-      break;
-    }
 
     if (!geminiRes || !geminiRes.ok) {
       const status = lastStatus;
