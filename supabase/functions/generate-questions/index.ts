@@ -251,7 +251,7 @@ Deno.serve(async (req: Request) => {
           messages: [{ role: 'user', content: prompt }],
           response_format: { type: 'json_object' },
           temperature: 0.7,
-          max_tokens: 32768,
+          max_tokens: 8000,
         }),
       },
     );
