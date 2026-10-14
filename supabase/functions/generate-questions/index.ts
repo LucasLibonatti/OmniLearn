@@ -372,9 +372,9 @@ Deno.serve(async (req: Request) => {
     if (logId) await admin.from('generation_log').update({ status: 'success' }).eq('id', logId);
 
     return json({ inserted: rows.length });
-  } catch {
+  } catch (err: any) {
     await admin.from('materials').update({ status: 'error', error_message: 'Falha ao gerar as questões.' }).eq('subject_id', subjectId).eq('user_id', user.id);
     if (logId) await admin.from('generation_log').update({ status: 'error' }).eq('id', logId);
-    return json({ error: 'Não foi possível gerar as questões agora. Tente novamente em instantes.' }, 502);
+    return json({ error: `Erro detalhado: ${err?.message || err}` }, 500);
   }
 });
