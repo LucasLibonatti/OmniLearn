@@ -199,7 +199,7 @@ Deno.serve(async (req: Request) => {
   const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
   const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-  const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') || 'gemini-3.5-flash';
+  const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') || 'gemini-1.5-flash';
   const LIMIT = Number(Deno.env.get('DAILY_GENERATION_LIMIT') || '5');
   const UNLIMITED = new Set(
     (Deno.env.get('UNLIMITED_USERS') || '')
