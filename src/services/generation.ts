@@ -4,7 +4,7 @@ export interface GenerationResult {
   inserted: number;
 }
 
-/** Chama a Edge Function que fala com o Gemini. A chave nunca fica no navegador. */
+/** Chama a Edge Function que fala com a IA. A chave nunca fica no navegador. */
 export async function generateQuestions(subjectId: string): Promise<GenerationResult> {
   const { data, error } = await supabase.functions.invoke('generate-questions', {
     body: { subject_id: subjectId },

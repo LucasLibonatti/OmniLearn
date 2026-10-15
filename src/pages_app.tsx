@@ -822,7 +822,7 @@ export function NewSubject() {
       )}
 
       <p className="text-xs text-slate-500">
-        O conteúdo enviado é processado por IA (Google Gemini) para gerar as questões e não deve conter dados pessoais de
+        O conteúdo enviado é processado por um serviço de IA para gerar as questões e não deve conter dados pessoais de
         terceiros.
       </p>
 
