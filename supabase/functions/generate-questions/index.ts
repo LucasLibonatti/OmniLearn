@@ -4,10 +4,11 @@
 // Secrets esperados:
 //   GROQ_API_KEY             (obrigatório)
 //   GROQ_MODEL               (opcional; padrão: openai/gpt-oss-20b)
-//   MAX_INPUT_CHARS          (opcional; padrão: 10000 — mantém input+output dentro do TPM da Groq free tier)
-//   MAX_OUTPUT_TOKENS        (opcional; padrão: 4096)
-//   DEFAULT_QUANTITY         (opcional; padrão: 10)
-//   MAX_QUANTITY             (opcional; padrão: 15)
+//   GROQ_TPM_LIMIT           (opcional; padrão: 8000 — TPM da conta; input + saída não pode passar disso)
+//   MAX_INPUT_CHARS          (opcional; padrão: 8000)
+//   MAX_OUTPUT_TOKENS        (opcional; padrão: 3500)
+//   DEFAULT_QUANTITY         (opcional; padrão: 8)
+//   MAX_QUANTITY             (opcional; padrão: 12)
 //   DAILY_GENERATION_LIMIT   (opcional; padrão: 5 gerações BEM-SUCEDIDAS por usuário por dia)
 //   UNLIMITED_USERS          (opcional; e-mails e/ou IDs separados por vírgula que NÃO têm limite)
 //
@@ -28,10 +29,13 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-const MAX_INPUT_CHARS = Number(Deno.env.get('MAX_INPUT_CHARS') || '10000');
-const MAX_OUTPUT_TOKENS = Number(Deno.env.get('MAX_OUTPUT_TOKENS') || '4096');
-const DEFAULT_QUANTITY = Number(Deno.env.get('DEFAULT_QUANTITY') || '10');
-const MAX_QUANTITY = Number(Deno.env.get('MAX_QUANTITY') || '15');
+// A Groq conta o prompt + o max_completion_tokens reservado no TPM (tokens por minuto).
+// A conta gratuita tem só 8000 TPM, então é preciso manter input + saída abaixo disso.
+const TPM_LIMIT = Number(Deno.env.get('GROQ_TPM_LIMIT') || '8000');
+const MAX_INPUT_CHARS = Number(Deno.env.get('MAX_INPUT_CHARS') || '8000');
+const MAX_OUTPUT_TOKENS = Number(Deno.env.get('MAX_OUTPUT_TOKENS') || '3500');
+const DEFAULT_QUANTITY = Number(Deno.env.get('DEFAULT_QUANTITY') || '8');
+const MAX_QUANTITY = Number(Deno.env.get('MAX_QUANTITY') || '12');
 
 type QType = 'multiple' | 'tf' | 'fill' | 'match' | 'short';
 
@@ -184,7 +188,7 @@ class GroqError extends Error {
 }
 
 /** Chama a API da Groq com retry/backoff para 429 e erros 5xx. */
-async function callGroq(prompt: string, key: string): Promise<string> {
+async function callGroq(prompt: string, key: string, maxTokens: number): Promise<string> {
   const model = Deno.env.get('GROQ_MODEL') || 'openai/gpt-oss-20b';
   let lastStatus = 0;
 
@@ -200,7 +204,7 @@ async function callGroq(prompt: string, key: string): Promise<string> {
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: 'json_object' },
         temperature: 0.6,
-        max_completion_tokens: MAX_OUTPUT_TOKENS,
+        max_completion_tokens: maxTokens,
         // gpt-oss-20b: reduz o "reasoning" (tokens cobrados) e não devolve o rascunho.
         reasoning_effort: 'low',
         include_reasoning: false,
@@ -327,7 +331,11 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const contentText = await callGroq(prompt, GROQ_API_KEY);
+    // A Groq cobra prompt + max_completion_tokens no TPM. Estima o input (~3 chars/token,
+    // conservador para português) e reserva a sobra para a saída, sempre abaixo do teto.
+    const estimatedInputTokens = Math.ceil(prompt.length / 3);
+    const maxOut = Math.max(512, Math.min(MAX_OUTPUT_TOKENS, TPM_LIMIT - estimatedInputTokens - 300));
+    const contentText = await callGroq(prompt, GROQ_API_KEY, maxOut);
 
     const raw = contentText.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
     let parsed: { questions?: RawQuestion[] };
@@ -378,6 +386,9 @@ Deno.serve(async (req: Request) => {
     console.error('generate-questions error:', err);
     if (err instanceof GroqError && err.status === 429) {
       return await fail('Muitas gerações em pouco tempo. Aguarde um minuto e tente de novo.', 429);
+    }
+    if (err instanceof GroqError && err.status === 413) {
+      return await fail('O material é grande demais para gerar de uma vez. Tente com um texto menor.', 413);
     }
     return await fail('Não foi possível gerar as questões agora. Tente novamente em instantes.', 502);
   }
