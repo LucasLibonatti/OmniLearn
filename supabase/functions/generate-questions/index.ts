@@ -33,7 +33,7 @@ function json(body: unknown, status = 200): Response {
 // A conta gratuita tem só 8000 TPM, então é preciso manter input + saída abaixo disso.
 const TPM_LIMIT = Number(Deno.env.get('GROQ_TPM_LIMIT') || '8000');
 const MAX_INPUT_CHARS = Number(Deno.env.get('MAX_INPUT_CHARS') || '6000');
-const MAX_OUTPUT_TOKENS = Number(Deno.env.get('MAX_OUTPUT_TOKENS') || '2000');
+const MAX_OUTPUT_TOKENS = Number(Deno.env.get('MAX_OUTPUT_TOKENS') || '3000');
 // Estimativa conservadora: assume ~1.5 caractere por token (superestima os tokens do
 // português) e guarda uma margem, para nunca passar do TPM da conta gratuita.
 const CHARS_PER_TOKEN = 1.5;
@@ -89,7 +89,8 @@ function clean(q: RawQuestion): CleanQuestion | null {
   const prompt = (q.prompt ?? '').trim();
   const topic = (q.topic ?? '').trim().slice(0, 60);
   const explanation = (q.explanation ?? '').trim();
-  if (prompt.length < 5 || !topic || explanation.length < 3) return null;
+  // Só exige o enunciado: topic/explanation podem vir vazios sem descartar a questão.
+  if (prompt.length < 5) return null;
   const difficulty = Math.min(3, Math.max(1, Math.round(Number(q.difficulty) || 2)));
 
   if (type === 'multiple') {
@@ -348,16 +349,24 @@ Deno.serve(async (req: Request) => {
     const contentText = await callGroq(prompt, GROQ_API_KEY, maxOut);
 
     const raw = contentText.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-    let parsed: { questions?: RawQuestion[] };
+    let parsed: unknown;
     try {
       parsed = JSON.parse(raw);
     } catch {
+      console.error('generate-questions: JSON inválido da IA:', raw.slice(0, 800));
       return await fail('A IA respondeu num formato inesperado. Tente novamente.', 502);
     }
 
+    // A IA normalmente devolve {"questions":[...]}, mas às vezes vem um array puro.
+    const rawQuestions: RawQuestion[] = Array.isArray(parsed)
+      ? (parsed as RawQuestion[])
+      : Array.isArray((parsed as { questions?: unknown })?.questions)
+        ? (parsed as { questions: RawQuestion[] }).questions
+        : [];
+
     const seen = new Set<string>();
     const cleaned: CleanQuestion[] = [];
-    for (const rawQ of parsed.questions ?? []) {
+    for (const rawQ of rawQuestions) {
       const q = clean(rawQ);
       if (!q) continue;
       const key = norm(q.prompt);
@@ -367,7 +376,8 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!cleaned.length) {
-      return await fail('A IA não gerou questões válidas. Tente novamente com outro material.', 502);
+      console.error(`generate-questions: nenhuma questão válida (recebidas ${rawQuestions.length}). raw=`, raw.slice(0, 800));
+      return await fail('A IA não gerou questões válidas para este material. Tente novamente com outro material.', 502);
     }
 
     const rows = cleaned.map((q) => ({
