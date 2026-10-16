@@ -32,8 +32,13 @@ function json(body: unknown, status = 200): Response {
 // A Groq conta o prompt + o max_completion_tokens reservado no TPM (tokens por minuto).
 // A conta gratuita tem só 8000 TPM, então é preciso manter input + saída abaixo disso.
 const TPM_LIMIT = Number(Deno.env.get('GROQ_TPM_LIMIT') || '8000');
-const MAX_INPUT_CHARS = Number(Deno.env.get('MAX_INPUT_CHARS') || '8000');
-const MAX_OUTPUT_TOKENS = Number(Deno.env.get('MAX_OUTPUT_TOKENS') || '3500');
+const MAX_INPUT_CHARS = Number(Deno.env.get('MAX_INPUT_CHARS') || '6000');
+const MAX_OUTPUT_TOKENS = Number(Deno.env.get('MAX_OUTPUT_TOKENS') || '2000');
+// Estimativa conservadora: assume ~1.5 caractere por token (superestima os tokens do
+// português) e guarda uma margem, para nunca passar do TPM da conta gratuita.
+const CHARS_PER_TOKEN = 1.5;
+const SAFETY_MARGIN = 600;
+const MIN_OUTPUT_TOKENS = 512;
 const DEFAULT_QUANTITY = Number(Deno.env.get('DEFAULT_QUANTITY') || '8');
 const MAX_QUANTITY = Number(Deno.env.get('MAX_QUANTITY') || '12');
 
@@ -131,13 +136,13 @@ function clean(q: RawQuestion): CleanQuestion | null {
 }
 
 /** Recorta o texto de vários materiais para um total de ~MAX_INPUT_CHARS, de forma equilibrada. */
-function balancedTruncate(texts: string[]): string {
+function balancedTruncate(texts: string[], limit: number): string {
   const nonEmpty = texts.filter((t) => t.trim().length > 0);
   if (!nonEmpty.length) return '';
   const total = nonEmpty.reduce((a, t) => a + t.length, 0);
-  if (total <= MAX_INPUT_CHARS) return nonEmpty.join('\n\n---\n\n');
-  const per = Math.floor(MAX_INPUT_CHARS / nonEmpty.length);
-  let remaining = MAX_INPUT_CHARS;
+  if (total <= limit) return nonEmpty.join('\n\n---\n\n');
+  const per = Math.floor(limit / nonEmpty.length);
+  let remaining = limit;
   const parts: string[] = [];
   for (const t of nonEmpty) {
     const take = Math.min(t.length, Math.max(per, 0), remaining);
@@ -320,7 +325,13 @@ Deno.serve(async (req: Request) => {
 
   await admin.from('materials').update({ status: 'generating', error_message: null }).eq('subject_id', subjectId).eq('user_id', user.id);
 
-  const content = balancedTruncate(withText.map((m) => m.extracted_text as string));
+  // Orçamento de caracteres do material derivado do TPM: tira a saída, a margem de
+  // segurança e o texto fixo das instruções; o que sobra vai para o material.
+  const inputCharBudget = Math.max(
+    2000,
+    Math.min(MAX_INPUT_CHARS, Math.floor((TPM_LIMIT - MAX_OUTPUT_TOKENS - SAFETY_MARGIN - 900) * CHARS_PER_TOKEN)),
+  );
+  const content = balancedTruncate(withText.map((m) => m.extracted_text as string), inputCharBudget);
   const prompt = buildPrompt(subject.name ?? 'Matéria', subject.topic ?? '', content, quantity);
 
   async function fail(message: string, status: number): Promise<Response> {
@@ -330,10 +341,10 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // A Groq cobra prompt + max_completion_tokens no TPM. Estima o input (~3 chars/token,
-    // conservador para português) e reserva a sobra para a saída, sempre abaixo do teto.
-    const estimatedInputTokens = Math.ceil(prompt.length / 3);
-    const maxOut = Math.max(512, Math.min(MAX_OUTPUT_TOKENS, TPM_LIMIT - estimatedInputTokens - 300));
+    // A Groq cobra prompt + max_completion_tokens no TPM. Estima o input de forma
+    // conservadora (superestimando os tokens) e reserva a sobra para a saída.
+    const estimatedInputTokens = Math.ceil(prompt.length / CHARS_PER_TOKEN);
+    const maxOut = Math.max(MIN_OUTPUT_TOKENS, Math.min(MAX_OUTPUT_TOKENS, TPM_LIMIT - estimatedInputTokens - SAFETY_MARGIN));
     const contentText = await callGroq(prompt, GROQ_API_KEY, maxOut);
 
     const raw = contentText.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();

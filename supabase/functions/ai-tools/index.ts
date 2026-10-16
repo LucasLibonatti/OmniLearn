@@ -22,7 +22,16 @@ function json(body: unknown, status = 200): Response {
 const TPM_LIMIT = Number(Deno.env.get('GROQ_TPM_LIMIT') || '8000');
 const MAX_OUTPUT_TOKENS = Number(Deno.env.get('GROQ_MAX_OUTPUT_TOKENS') || '1500');
 const REQUEST_TIMEOUT_MS = Number(Deno.env.get('GROQ_TIMEOUT_MS') || '60000');
-const MAX_CHARS = Number(Deno.env.get('AI_MAX_INPUT_CHARS') || '15000');
+// Estimativa conservadora: assume ~1.5 caractere por token (superestima os tokens do
+// português) e guarda uma margem, para nunca passar do TPM da conta gratuita.
+const CHARS_PER_TOKEN = 1.5;
+const SAFETY_MARGIN = 600;
+const MIN_OUTPUT_TOKENS = 512;
+// Teto de caracteres do material, derivado do TPM (com opção de teto menor via env).
+const MAX_CHARS = Math.min(
+  Number(Deno.env.get('AI_MAX_INPUT_CHARS') || '6000'),
+  Math.floor((TPM_LIMIT - MAX_OUTPUT_TOKENS - SAFETY_MARGIN - 900) * CHARS_PER_TOKEN),
+);
 
 function truncate(s: string): string {
   return s.length > MAX_CHARS ? s.slice(0, MAX_CHARS) : s;
@@ -40,8 +49,8 @@ class GroqError extends Error {
 
 /** Uma única tentativa: sem retry, para não gastar as poucas requisições do plano gratuito. */
 async function callGroq(prompt: string, key: string, model: string): Promise<string> {
-  const estimatedInputTokens = Math.ceil(prompt.length / 3);
-  const maxOut = Math.max(256, Math.min(MAX_OUTPUT_TOKENS, TPM_LIMIT - estimatedInputTokens - 300));
+  const estimatedInputTokens = Math.ceil(prompt.length / CHARS_PER_TOKEN);
+  const maxOut = Math.max(MIN_OUTPUT_TOKENS, Math.min(MAX_OUTPUT_TOKENS, TPM_LIMIT - estimatedInputTokens - SAFETY_MARGIN));
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
