@@ -594,7 +594,7 @@ export function SubjectPage() {
           <h2 className="font-bold mb-2">✨ Resumo da IA</h2>
           {sumBusy && <p className="text-sm text-slate-600">Lendo seus materiais e resumindo…</p>}
           {sumErr && <p className="text-sm text-red-600">{sumErr}</p>}
-          {summary && <p className="text-sm text-slate-700 whitespace-pre-line">{summary}</p>}
+          {summary && (   <p      className="text-sm text-slate-700 whitespace-pre-line"      dangerouslySetInnerHTML={{ __html: summary }}    /> )}
         </Card>
       )}
 
