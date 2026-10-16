@@ -25,6 +25,7 @@ import {
   Share2,
   Layers,
 } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { Avatar, Btn, Card, Bar, Ring, Logo } from './ui';
 import { EmptyState, ErrorState, Generating, Skeleton, Spinner } from './components/states';
 import { useAuth } from './auth';
@@ -594,7 +595,12 @@ export function SubjectPage() {
           <h2 className="font-bold mb-2">✨ Resumo da IA</h2>
           {sumBusy && <p className="text-sm text-slate-600">Lendo seus materiais e resumindo…</p>}
           {sumErr && <p className="text-sm text-red-600">{sumErr}</p>}
-          {summary && (   <p      className="text-sm text-slate-700 whitespace-pre-line"      dangerouslySetInnerHTML={{ __html: summary }}    /> )}
+          {summary && (
+            <p
+              className="text-sm text-slate-700 whitespace-pre-line"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(summary, { ALLOWED_TAGS: ['strong'] }) }}
+            />
+          )}
         </Card>
       )}
 

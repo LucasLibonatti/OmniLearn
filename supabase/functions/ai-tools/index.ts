@@ -1,5 +1,9 @@
 // Edge Function: resumo de matéria e explicação de questão via Groq.
 // Secrets: GROQ_API_KEY (obrigatório), GROQ_MODEL (opcional), AI_DAILY_LIMIT (opcional; padrão: 30/dia).
+//
+// A conta gratuita da Groq é limitada (poucas requisições/minuto e 8000 TPM).
+// Por isso NÃO há retentativa automática: se a chamada falhar, devolvemos o erro
+// na hora e pedimos para o usuário tentar novamente mais tarde.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -13,18 +17,37 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 }
 
-const MAX_CHARS = 60000;
+// A Groq cobra entrada + saída no TPM (tokens por minuto). A conta gratuita tem 8000,
+// então mantemos a entrada curta e reservamos a sobra para a saída.
+const TPM_LIMIT = Number(Deno.env.get('GROQ_TPM_LIMIT') || '8000');
+const MAX_OUTPUT_TOKENS = Number(Deno.env.get('GROQ_MAX_OUTPUT_TOKENS') || '1500');
+const REQUEST_TIMEOUT_MS = Number(Deno.env.get('GROQ_TIMEOUT_MS') || '60000');
+const MAX_CHARS = Number(Deno.env.get('AI_MAX_INPUT_CHARS') || '15000');
 
 function truncate(s: string): string {
   return s.length > MAX_CHARS ? s.slice(0, MAX_CHARS) : s;
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** Erro de chamada à Groq, carregando o status HTTP para mapear numa mensagem amigável. */
+class GroqError extends Error {
+  status: number;
+  constructor(status: number) {
+    super(`Groq respondeu ${status}`);
+    this.name = 'GroqError';
+    this.status = status;
+  }
+}
 
+/** Uma única tentativa: sem retry, para não gastar as poucas requisições do plano gratuito. */
 async function callGroq(prompt: string, key: string, model: string): Promise<string> {
-  let lastStatus = 0;
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  const estimatedInputTokens = Math.ceil(prompt.length / 3);
+  const maxOut = Math.max(256, Math.min(MAX_OUTPUT_TOKENS, TPM_LIMIT - estimatedInputTokens - 300));
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -34,22 +57,24 @@ async function callGroq(prompt: string, key: string, model: string): Promise<str
         model,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.4,
+        max_completion_tokens: maxOut,
       }),
+      signal: controller.signal,
     });
-    if (res.ok) {
-      const data = await res.json();
-      const text: string | undefined = data?.choices?.[0]?.message?.content;
-      if (text && text.trim()) return text.trim();
-      throw new Error('empty');
-    }
-    lastStatus = res.status;
-    if (res.status === 503 || res.status === 429) {
-      await sleep(1200 * Math.pow(2, attempt) + Math.random() * 800);
-      continue;
-    }
-    break;
+  } finally {
+    clearTimeout(timer);
   }
-  throw new Error('groq ' + lastStatus);
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    console.error(`Groq error ${res.status}:`, errText.slice(0, 500));
+    throw new GroqError(res.status);
+  }
+
+  const data = await res.json();
+  const content = data?.choices?.[0]?.message?.content;
+  if (typeof content === 'string' && content.trim()) return content.trim();
+  throw new GroqError(502);
 }
 
 Deno.serve(async (req: Request) => {
@@ -164,7 +189,16 @@ Deno.serve(async (req: Request) => {
 
     return json({ error: 'Ação desconhecida.' }, 400);
   } catch (e) {
+    // Sem retry: mapeia o erro da Groq numa mensagem clara e para por aqui.
+    if (e instanceof GroqError) {
+      if (e.status === 429) {
+        return json({ error: 'Muitas solicitações em pouco tempo. Aguarde um instante e tente novamente.' }, 429);
+      }
+      if (e.status === 413) {
+        return json({ error: 'O conteúdo é grande demais para resumir de uma vez. Tente com menos material.' }, 413);
+      }
+    }
     console.error('ai-tools error:', (e as Error).message);
-    return json({ error: 'Não foi possível processar agora. Tente novamente em instantes.' }, 502);
+    return json({ error: 'Não foi possível processar agora. Tente novamente mais tarde.' }, 502);
   }
 });

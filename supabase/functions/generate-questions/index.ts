@@ -177,23 +177,28 @@ function buildPrompt(subjectName: string, subjectTopic: string, content: string,
   ].join('\n');
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
+/** Erro de chamada à Groq, carregando o status HTTP para mapear numa mensagem amigável. */
 class GroqError extends Error {
   status: number;
   constructor(status: number) {
-    super(`groq_${status}`);
+    super(`Groq respondeu ${status}`);
+    this.name = 'GroqError';
     this.status = status;
   }
 }
 
-/** Chama a API da Groq com retry/backoff para 429 e erros 5xx. */
+// Sem retry: a conta gratuita da Groq tem pouquíssimas requisições por minuto, então
+// fazemos uma única tentativa. Se falhar, o erro sobe e o usuário tenta mais tarde.
+const REQUEST_TIMEOUT_MS = Number(Deno.env.get('GROQ_TIMEOUT_MS') || '90000');
+
 async function callGroq(prompt: string, key: string, maxTokens: number): Promise<string> {
   const model = Deno.env.get('GROQ_MODEL') || 'openai/gpt-oss-20b';
-  let lastStatus = 0;
 
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -209,28 +214,22 @@ async function callGroq(prompt: string, key: string, maxTokens: number): Promise
         reasoning_effort: 'low',
         include_reasoning: false,
       }),
+      signal: controller.signal,
     });
+  } finally {
+    clearTimeout(timer);
+  }
 
-    if (res.ok) {
-      const data = await res.json();
-      const content: string | undefined = data?.choices?.[0]?.message?.content;
-      if (content && content.trim()) return content.trim();
-      throw new GroqError(502);
-    }
-
-    lastStatus = res.status;
+  if (!res.ok) {
     const errText = await res.text().catch(() => '');
     console.error(`Groq error ${res.status}:`, errText.slice(0, 500));
-
-    if (res.status === 429 || res.status >= 500) {
-      const retryAfter = Number(res.headers.get('retry-after')) || 0;
-      const wait = retryAfter > 0 ? retryAfter * 1000 : 1500 * Math.pow(2, attempt) + Math.random() * 500;
-      await sleep(Math.min(wait, 15000));
-      continue;
-    }
-    break;
+    throw new GroqError(res.status);
   }
-  throw new GroqError(lastStatus);
+
+  const data = await res.json();
+  const content: string | undefined = data?.choices?.[0]?.message?.content;
+  if (content && content.trim()) return content.trim();
+  throw new GroqError(502);
 }
 
 Deno.serve(async (req: Request) => {

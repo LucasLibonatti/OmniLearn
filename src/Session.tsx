@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Check, X, Clock, Sparkles } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { Btn, Bar, Card, Select } from './ui';
 import { shuffle } from './lib/shuffle';
 import { EmptyState, ErrorState, Spinner } from './components/states';
@@ -345,7 +346,10 @@ export default function Session() {
           {explain && (
             <div className="mt-3 rounded-2xl bg-white/70 border border-indigo-100 p-3">
               <p className="text-xs font-bold text-indigo-600 mb-1">✨ Explicação da IA</p>
-              <p className="text-sm text-slate-700 whitespace-pre-line">{explain}</p>
+              <p
+                className="text-sm text-slate-700 whitespace-pre-line"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(explain, { ALLOWED_TAGS: ['strong'] }) }}
+              />
             </div>
           )}
           {explainErr && <p className="text-sm text-red-500 mt-2">{explainErr}</p>}
