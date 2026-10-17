@@ -5,13 +5,16 @@ import { Btn, Card, Logo } from './ui';
 import { Icon } from './icons';
 import { Socials } from './components/Socials';
 import { sendSupport } from './services/support';
+import { useAuth } from './auth';
 
 function Shell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+  const { session } = useAuth();
+  const back = session ? '/dashboard' : '/';
   return (
     <div className="min-h-screen mesh">
       <header className="max-w-3xl mx-auto flex items-center justify-between p-5">
         <Logo />
-        <Btn v="s" to="/">
+        <Btn v="s" to={back}>
           Voltar
         </Btn>
       </header>
@@ -159,9 +162,6 @@ export function SocialsPage() {
       </div>
       <p className="text-center text-sm text-slate-500 mt-6">Toque em uma rede para seguir — em breve os links estarão ativos.</p>
       <Socials className="mt-4" />
-      <div className="text-center mt-6">
-        <Btn to="/">Voltar ao início</Btn>
-      </div>
     </Shell>
   );
 }
