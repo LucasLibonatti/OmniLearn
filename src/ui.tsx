@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
 import { iconSrc } from './icons';
+import { useAuth } from './auth';
 
 export const Card = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
   <div
@@ -177,17 +178,20 @@ export const Ring = ({ v, size = 150 }: { v: number; size?: number }) => {
   );
 };
 
-export const Logo = () => (
-  <Link to="/" className="group flex items-center gap-2.5">
-    <img
-      src={iconSrc.heroi}
-      alt="OmniLearn"
-      draggable={false}
-      className="w-11 h-11 object-contain icon3d transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
-    />
-    <span className="text-xl font-extrabold tracking-tight">OmniLearn</span>
-  </Link>
-);
+export const Logo = () => {
+  const { session } = useAuth();
+  return (
+    <Link to={session ? '/dashboard' : '/'} className="group flex items-center gap-2.5">
+      <img
+        src={iconSrc.heroi}
+        alt="OmniLearn"
+        draggable={false}
+        className="w-11 h-11 object-contain icon3d transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
+      />
+      <span className="text-xl font-extrabold tracking-tight">OmniLearn</span>
+    </Link>
+  );
+};
 
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
