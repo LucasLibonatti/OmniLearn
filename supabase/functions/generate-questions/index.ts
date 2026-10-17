@@ -433,7 +433,11 @@ Deno.serve(async (req: Request) => {
       return await fail('A IA não gerou questões válidas para este material. Tente novamente com outro material.', 502);
     }
 
-    const rows = cleaned.map((q) => ({
+    // A IA às vezes devolve bem mais do que foi pedido. Respeita o limite pedido
+    // (o prompt pede exatamente "quantity"), para não "estourar" a matéria com dezenas de questões.
+    const limited = cleaned.slice(0, quantity);
+
+    const rows = limited.map((q) => ({
       user_id: user.id,
       subject_id: subjectId,
       material_id: withText.length === 1 ? withText[0].id : null,

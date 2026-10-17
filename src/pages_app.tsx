@@ -581,6 +581,7 @@ export function SubjectPage() {
   const [summary, setSummary] = useState<string | null>(null);
   const [sumBusy, setSumBusy] = useState(false);
   const [sumErr, setSumErr] = useState<string | null>(null);
+  const [sumStart, setSumStart] = useState<number | null>(null);
 
   const data = useAsync(async () => {
     if (!id) return null;
@@ -615,12 +616,15 @@ export function SubjectPage() {
     if (!id) return;
     setSumBusy(true);
     setSumErr(null);
+    setSummary(null);
+    setSumStart(Date.now());
     try {
       setSummary(await summarizeSubject(id));
     } catch (e) {
       setSumErr((e as Error).message);
     } finally {
       setSumBusy(false);
+      setSumStart(null);
     }
   };
 
@@ -667,11 +671,11 @@ export function SubjectPage() {
           <Btn v="s" to={`/materias/nova?subject=${subject.id}`} disabled={materials.length >= 3}>
             {tr('Adicionar material')}
           </Btn>
-          <Btn v="s" onClick={generate} disabled={generating || materials.length === 0}>
+          <Btn v="s" onClick={generate} disabled={generating || sumBusy || materials.length === 0}>
             <Sparkles size={16} />
             {generating ? tr('Gerando…') : tr('Gerar mais questões')}
           </Btn>
-          <Btn v="s" onClick={doSummary} disabled={sumBusy || materials.length === 0}>
+          <Btn v="s" onClick={doSummary} disabled={sumBusy || generating || materials.length === 0}>
             <Sparkles size={16} />
             {sumBusy ? tr('Resumindo…') : tr('Resumo com IA')}
           </Btn>
@@ -706,12 +710,15 @@ export function SubjectPage() {
         <Generating label={tr('Gerando questões com a IA…')} startedAt={genStart} />
       )}
 
-      {(summary || sumBusy || sumErr) && (
+      {sumBusy && sumStart !== null && (
+        <Generating label={tr('Resumindo seus materiais com a IA…')} startedAt={sumStart} />
+      )}
+
+      {(summary || sumErr) && !sumBusy && (
         <Card className="bg-indigo-50 border-indigo-100">
           <h2 className="font-bold mb-2 inline-flex items-center gap-2">
             <Icon name="estrela" size={22} /> {tr('Resumo da IA')}
           </h2>
-          {sumBusy && <p className="text-sm text-slate-600">{tr('Lendo seus materiais e resumindo…')}</p>}
           {sumErr && <p className="text-sm text-red-600">{sumErr}</p>}
           {summary && (
             <p

@@ -253,4 +253,5 @@ export const EN_PAGES: Record<string, string> = {
   "Não há como recuperar depois.": "There is no way to recover it afterwards.",
   "Excluir tudo": "Delete everything",
   "Sair da sessão": "Leave session",
+  "Resumindo seus materiais com a IA…": "Summarizing your materials with AI…",
 };
