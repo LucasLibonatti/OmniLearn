@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
 import { iconSrc } from './icons';
@@ -6,8 +6,17 @@ import { useAuth } from './auth';
 import { useI18n } from './i18n';
 import { useSettings } from './hooks/useSettings';
 
-export const Card = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
+/**
+ * Indica que a página está sendo renderizada dentro do Layout do app (usuário logado),
+ * em vez do "shell" público. Páginas como Diretrizes/Suporte/Redes usam isso para
+ * esconder o cabeçalho público e manter a sidebar.
+ */
+export const InAppShell = createContext(false);
+export const useInAppShell = () => useContext(InAppShell);
+
+export const Card = ({ children, className = '', onClick }: { children: ReactNode; className?: string; onClick?: () => void }) => (
   <div
+    onClick={onClick}
     className={`rounded-3xl bg-white border border-slate-100 shadow-[0_4px_18px_-8px_rgba(15,23,42,0.18)] p-5 card3d ${className}`}
   >
     {children}
@@ -36,13 +45,13 @@ export const Btn = ({
       ? 'bg-indigo-600 text-white border-b-[#312e81] hover:bg-indigo-500 shadow-[0_4px_14px_-4px_rgba(79,70,229,.5)]'
       : 'bg-white text-slate-600 border-b-slate-300 hover:bg-slate-50'
   } ${className}`;
-  return to ? (
+  return to && !disabled ? (
     <Link to={to} className={c}>
-      {children}
+      <span className="btn3d-tx">{children}</span>
     </Link>
   ) : (
     <button type={type} onClick={onClick} disabled={disabled} className={c}>
-      {children}
+      <span className="btn3d-tx">{children}</span>
     </button>
   );
 };

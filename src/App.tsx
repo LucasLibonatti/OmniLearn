@@ -1,8 +1,9 @@
-import { lazy, Suspense, type ComponentType } from 'react';
+import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
 import { Route, Routes } from 'react-router-dom';
-import { AuthProvider, RequireAuth } from './auth';
+import { AuthProvider, RequireAuth, useAuth } from './auth';
 import { SettingsProvider } from './hooks/useSettings';
 import { I18nProvider } from './i18n';
+import { InAppShell } from './ui';
 import { Spinner } from './components/states';
 
 const page = (mod: () => Promise<{ [k: string]: unknown }>, name: string) =>
@@ -16,7 +17,7 @@ const NotFound = page(() => import('./pages_legal'), 'NotFound');
 const Support = page(() => import('./pages_support'), 'Support');
 const SocialsPage = page(() => import('./pages_support'), 'SocialsPage');
 const Dashboard = page(() => import('./pages_app'), 'Dashboard');
-const Layout = page(() => import('./pages_app'), 'Layout');
+const Layout = page(() => import('./pages_app'), 'Layout') as unknown as ComponentType<{ children?: ReactNode }>;
 const Subjects = page(() => import('./pages_app'), 'Subjects');
 const SubjectPage = page(() => import('./pages_app'), 'SubjectPage');
 const NewSubject = page(() => import('./pages_app'), 'NewSubject');
@@ -28,6 +29,22 @@ const Achievements = page(() => import('./pages_app'), 'Achievements');
 const Profile = page(() => import('./pages_app'), 'Profile');
 const Flashcards = page(() => import('./pages_app'), 'Flashcards');
 const PrintSubject = page(() => import('./pages_app'), 'PrintSubject');
+
+/**
+ * Páginas públicas (Diretrizes, Suporte, Redes): para o usuário logado elas aparecem
+ * dentro do Layout do app (com sidebar e sessão intacta); para o visitante, seguem
+ * como páginas públicas. Isso evita que a navegação "expulse" o usuário logado.
+ */
+function MaybeShell({ children }: { children: ReactNode }) {
+  const { session, loading } = useAuth();
+  if (loading) return <Spinner />;
+  if (!session) return <>{children}</>;
+  return (
+    <InAppShell.Provider value={true}>
+      <Layout>{children}</Layout>
+    </InAppShell.Provider>
+  );
+}
 
 function fallback() {
   return <Spinner />;
@@ -43,9 +60,30 @@ export default function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<AuthPage mode="login" />} />
             <Route path="/cadastro" element={<AuthPage mode="signup" />} />
-            <Route path="/diretrizes" element={<Guidelines />} />
-            <Route path="/suporte" element={<Support />} />
-            <Route path="/redes" element={<SocialsPage />} />
+            <Route
+              path="/diretrizes"
+              element={
+                <MaybeShell>
+                  <Guidelines />
+                </MaybeShell>
+              }
+            />
+            <Route
+              path="/suporte"
+              element={
+                <MaybeShell>
+                  <Support />
+                </MaybeShell>
+              }
+            />
+            <Route
+              path="/redes"
+              element={
+                <MaybeShell>
+                  <SocialsPage />
+                </MaybeShell>
+              }
+            />
             <Route path="/sessao/:id" element={<RequireAuth><Session /></RequireAuth>} />
             <Route path="/materias/:id/imprimir" element={<RequireAuth><PrintSubject /></RequireAuth>} />
             <Route element={<RequireAuth><Layout /></RequireAuth>}>

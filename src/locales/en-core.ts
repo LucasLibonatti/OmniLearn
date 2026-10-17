@@ -66,6 +66,8 @@ export const EN_CORE: Record<string, string> = {
   // services/ai.ts
   'Não foi possível gerar o resumo agora.': "We couldn't generate the summary right now.",
   'Não foi possível gerar a explicação agora.': "We couldn't generate the explanation right now.",
+  'A função de IA ainda não foi publicada no Supabase.':
+    'The AI function has not been published on Supabase yet.',
 
   // services/generation.ts
   'Não foi possível gerar as questões agora. Tente novamente em instantes.':

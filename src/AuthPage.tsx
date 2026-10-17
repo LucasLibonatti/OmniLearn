@@ -83,7 +83,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
               disabled={busy}
               className="btn3d w-full rounded-2xl bg-indigo-600 border-b-[#312e81] px-5 py-3 font-extrabold text-white hover:bg-indigo-500 disabled:opacity-40"
             >
-              {login ? t('auth.submit.login') : t('auth.submit.signup')}
+              <span className="btn3d-tx">{login ? t('auth.submit.login') : t('auth.submit.signup')}</span>
             </button>
           </form>
           <Btn v="s" className="w-full mt-3" onClick={signInWithGoogle}>{t('auth.google')}</Btn>

@@ -17,10 +17,14 @@ h1,h2,h3,.font-display{letter-spacing:-.02em}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 
 /* ===== Botões "3D" (estilo Duolingo) ===== */
-.btn3d{border-bottom-width:4px;transition:transform .08s ease,filter .15s ease,border-color .15s ease}
+/* O conteúdo interno "afunda" no pressionar, mas a caixa do botão NÃO se move —
+   assim o clique nunca se perde por o alvo sair debaixo do cursor. */
+.btn3d{border-bottom-width:4px;cursor:pointer;transition:filter .15s ease,border-color .15s ease,box-shadow .12s ease}
 .btn3d:hover{filter:brightness(1.06)}
-.btn3d:active{transform:translateY(4px);border-bottom-width:0;margin-bottom:4px}
-.btn3d:disabled{opacity:.45;filter:none}
+.btn3d:active{filter:brightness(.94);box-shadow:none}
+.btn3d>.btn3d-tx{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;transition:transform .08s ease}
+.btn3d:active>.btn3d-tx{transform:translateY(4px)}
+.btn3d:disabled{opacity:.45;filter:none;cursor:default}
 
 /* ===== Mascote ===== */
 .breathe{animation:breathe 4.5s ease-in-out infinite}

@@ -1,9 +1,24 @@
 import { Link } from 'react-router-dom';
-import { Btn, Card, Logo, LangSwitch } from './ui';
+import { Btn, Card, Logo, LangSwitch, useInAppShell } from './ui';
 import { useI18n } from './i18n';
 
 function LegalShell({ title, updated, children }: { title: string; updated: string; children: React.ReactNode }) {
   const { t } = useI18n();
+  const inApp = useInAppShell();
+  if (inApp) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-3xl font-black">{title}</h1>
+          <p className="text-sm font-semibold text-slate-500 mt-1">
+            {t('legal.updated')}: {updated}
+          </p>
+        </div>
+        <Card className="space-y-5 leading-relaxed font-semibold">{children}</Card>
+        <p className="text-xs font-semibold text-slate-400">{t('legal.disclaimer')}</p>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen">
       <header className="max-w-3xl mx-auto flex items-center justify-between gap-3 p-5">

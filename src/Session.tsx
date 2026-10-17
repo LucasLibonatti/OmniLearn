@@ -6,6 +6,7 @@ import { Btn, Bar, Card, Select } from './ui';
 import { Icon } from './icons';
 import { shuffle } from './lib/shuffle';
 import { EmptyState, ErrorState, Spinner } from './components/states';
+import { confirmDialog } from './components/confirm';
 import { useAuth } from './auth';
 import { useI18n } from './i18n';
 import { useSettings } from './hooks/useSettings';
@@ -227,8 +228,13 @@ export default function Session() {
       <div className="flex items-center gap-3">
         <button
           aria-label={tr('Sair da sessão')}
-          onClick={() => {
-            if (confirm(tr('Sair? Sua sessão fica salva e você pode continuar depois.'))) nav('/dashboard');
+          onClick={async () => {
+            const ok = await confirmDialog({
+              title: tr('Sair da sessão'),
+              message: tr('Sair? Sua sessão fica salva e você pode continuar depois.'),
+              confirmLabel: tr('Sair'),
+            });
+            if (ok) nav('/dashboard');
           }}
           className="p-2 rounded-xl hover:bg-slate-100"
         >

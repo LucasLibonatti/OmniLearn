@@ -103,18 +103,27 @@ async function subjectStats(userId: string, subjectId: string): Promise<SubjectS
   return map.get(subjectId) ?? EMPTY_STATS;
 }
 
-export async function listSubjects(userId: string): Promise<SubjectWithStats[]> {
+async function listByArchived(userId: string, archived: boolean): Promise<SubjectWithStats[]> {
   const { data, error } = await supabase
     .from('subjects')
     .select('*')
     .eq('user_id', userId)
-    .eq('archived', false)
+    .eq('archived', archived)
     .order('created_at', { ascending: false });
   if (error) throw error;
   const subjects = (data ?? []) as SubjectRow[];
   if (!subjects.length) return [];
   const stats = await subjectStatsBatch(userId, subjects.map((s) => s.id));
   return subjects.map((s) => ({ ...base(s), ...(stats.get(s.id) ?? EMPTY_STATS) }));
+}
+
+export function listSubjects(userId: string): Promise<SubjectWithStats[]> {
+  return listByArchived(userId, false);
+}
+
+/** Matérias arquivadas — ficam fora do fluxo principal, mas o usuário pode reativá-las. */
+export function listArchivedSubjects(userId: string): Promise<SubjectWithStats[]> {
+  return listByArchived(userId, true);
 }
 
 export async function getSubject(id: string): Promise<Subject | null> {
@@ -144,6 +153,11 @@ export async function renameSubject(id: string, name: string): Promise<void> {
 
 export async function archiveSubject(id: string): Promise<void> {
   const { error } = await supabase.from('subjects').update({ archived: true }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function unarchiveSubject(id: string): Promise<void> {
+  const { error } = await supabase.from('subjects').update({ archived: false }).eq('id', id);
   if (error) throw error;
 }
 

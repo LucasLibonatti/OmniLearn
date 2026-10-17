@@ -1,10 +1,8 @@
-import { supabase } from '../lib/supabase';
 import { tr } from '../i18n';
+import { AI_NOT_PUBLISHED, invokeFunction } from './fn';
 
 async function call(body: Record<string, unknown>, fallback: string): Promise<string> {
-  const { data, error } = await supabase.functions.invoke('ai-tools', { body });
-  if (error) throw new Error(fallback);
-  if (data?.error) throw new Error(String(data.error));
+  const data = await invokeFunction<{ text?: string }>('ai-tools', body, fallback, AI_NOT_PUBLISHED());
   const text = data?.text;
   if (typeof text !== 'string' || !text.trim()) throw new Error(fallback);
   return text.trim();

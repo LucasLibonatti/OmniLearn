@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type DragEvent } from 'react';
+import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Home,
@@ -30,11 +30,12 @@ import DOMPurify from 'dompurify';
 import { Avatar, Btn, Card, Bar, Ring, Logo } from './ui';
 import { EmojiIcon, Icon, flameFor, type IconName } from './icons';
 import { EmptyState, ErrorState, Generating, Skeleton, Spinner } from './components/states';
+import { confirmDialog } from './components/confirm';
 import { useAuth } from './auth';
 import { useAsync } from './hooks/useAsync';
 import { useSettings } from './hooks/useSettings';
 import { useI18n, type Lang } from './i18n';
-import { useProfile, useSubjects } from './hooks/useApp';
+import { useProfile, useSubjects, useArchivedSubjects } from './hooks/useApp';
 import {
   archiveSubject,
   createSubject,
@@ -43,6 +44,7 @@ import {
   getSubjectStats,
   listSubjects,
   renameSubject,
+  unarchiveSubject,
 } from './services/subjects';
 import { getProfile, updateDailyGoal, updateProfileName, uploadAvatar } from './services/profile';
 import {
@@ -92,7 +94,7 @@ function Switch({ on, onChange, label }: { on: boolean; onChange: () => void; la
   );
 }
 
-export function Layout() {
+export function Layout({ children }: { children?: ReactNode }) {
   const { tr } = useI18n();
   const { data: profile } = useProfile();
   const { session, signOut } = useAuth();
@@ -187,7 +189,7 @@ export function Layout() {
         </div>
       </aside>
       <main key={loc.pathname} className="max-w-5xl mx-auto p-5 md:p-10 pb-28 fade">
-        <Outlet />
+        {children ?? <Outlet />}
       </main>
       <nav aria-label={tr('Mobile')} className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 flex justify-around py-2 z-10">
         {nav.map((n) => (
@@ -231,10 +233,12 @@ function Week({ dates }: { dates: string[] }) {
 export function SubjectCard({
   s,
   manage = false,
+  archived = false,
   onChanged,
 }: {
   s: SubjectWithStats;
   manage?: boolean;
+  archived?: boolean;
   onChanged?: () => void;
 }) {
   const { tr } = useI18n();
@@ -242,6 +246,7 @@ export function SubjectCard({
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(s.name);
   const [busy, setBusy] = useState(false);
+  const open = () => nav2(`/materias/${s.id}`);
 
   const save = async () => {
     if (!name.trim() || name === s.name) {
@@ -258,7 +263,13 @@ export function SubjectCard({
     }
   };
   const archive = async () => {
-    if (!confirm(tr('Arquivar "{name}"? Você pode reativar depois.', { name: s.name }))) return;
+    const ok = await confirmDialog({
+      title: tr('Arquivar matéria'),
+      message: tr('Tem certeza que deseja arquivar a matéria "{name}"?', { name: s.name }),
+      note: tr('Você poderá recuperá-la depois em "Arquivadas".'),
+      confirmLabel: tr('Arquivar'),
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await archiveSubject(s.id);
@@ -267,8 +278,24 @@ export function SubjectCard({
       setBusy(false);
     }
   };
+  const unarchive = async () => {
+    setBusy(true);
+    try {
+      await unarchiveSubject(s.id);
+      onChanged?.();
+    } finally {
+      setBusy(false);
+    }
+  };
   const remove = async () => {
-    if (!confirm(tr('Excluir "{name}"? Isto apaga as questões, materiais e arquivos enviados.', { name: s.name }))) return;
+    const ok = await confirmDialog({
+      title: tr('Excluir matéria'),
+      message: tr('Tem certeza que deseja excluir a matéria "{name}"?', { name: s.name }),
+      note: tr('Se você excluir, esta matéria será apagada para sempre, junto com as questões, materiais e arquivos enviados.'),
+      confirmLabel: tr('Excluir'),
+      danger: true,
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await deleteSubject(s.id);
@@ -279,12 +306,13 @@ export function SubjectCard({
   };
 
   return (
-    <Card className="hover:shadow-md transition">
+    <Card className="hover:shadow-md transition cursor-pointer" onClick={open}>
       <div className="flex justify-between items-start gap-2">
         {editing ? (
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.key === 'Enter' && save()}
             className="rounded-xl border border-slate-200 px-3 py-1 text-sm font-bold"
             autoFocus
@@ -306,16 +334,29 @@ export function SubjectCard({
         </div>
         <span className="text-sm font-bold">{s.progress}%</span>
       </div>
-      <div className="mt-4 flex gap-2">
-        <Btn className="flex-1" onClick={() => nav2(`/sessao/configurar/${s.id}`)} disabled={!s.questions}>
-          {s.questions ? tr('Estudar') : tr('Sem questões')}
-        </Btn>
-        <Btn v="s" to={`/materias/${s.id}`}>
-          {tr('Abrir')}
-        </Btn>
+      <div className="mt-4 flex gap-2" onClick={(e) => e.stopPropagation()}>
+        {archived ? (
+          <>
+            <Btn className="flex-1" onClick={unarchive} disabled={busy}>
+              {tr('Reativar')}
+            </Btn>
+            <Btn v="s" onClick={remove} disabled={busy}>
+              <Trash2 size={16} /> {tr('Excluir')}
+            </Btn>
+          </>
+        ) : (
+          <>
+            <Btn className="flex-1" onClick={() => nav2(`/sessao/configurar/${s.id}`)} disabled={!s.questions}>
+              {s.questions ? tr('Estudar') : tr('Sem questões')}
+            </Btn>
+            <Btn v="s" to={`/materias/${s.id}`}>
+              {tr('Abrir')}
+            </Btn>
+          </>
+        )}
       </div>
-      {manage && (
-        <div className="mt-2 flex justify-end items-center gap-1 text-slate-400">
+      {manage && !archived && (
+        <div className="mt-2 flex justify-end items-center gap-1 text-slate-400" onClick={(e) => e.stopPropagation()}>
           {editing ? (
             <button onClick={save} disabled={busy} className="px-2 py-1 text-xs font-semibold text-indigo-600">
               {tr('Salvar')}
@@ -340,6 +381,7 @@ export function SubjectCard({
 export function Dashboard() {
   const { tr } = useI18n();
   const { session } = useAuth();
+  const nav2 = useNavigate();
   const userId = session?.user.id;
   const { data: profile } = useProfile();
   const subjects = useSubjects();
@@ -392,7 +434,7 @@ export function Dashboard() {
                 {tr('Começar sessão de hoje')}
               </Btn>
             ) : (
-              <Btn to="/materias/nova">{tr('Criar minha primeira matéria')}</Btn>
+              <Btn onClick={() => nav2('/materias/nova')}>{tr('Criar minha primeira matéria')}</Btn>
             )}
           </div>
         </Card>
@@ -411,7 +453,7 @@ export function Dashboard() {
           icon={<Icon name="livro" size={56} />}
           title={tr('Bem-vindo ao OmniLearn!')}
           desc={tr('Crie sua primeira matéria, envie seus slides e deixe a IA montar seus exercícios.')}
-          action={<Btn to="/materias/nova">{tr('Criar minha primeira matéria')}</Btn>}
+          action={<Btn onClick={() => nav2('/materias/nova')}>{tr('Criar minha primeira matéria')}</Btn>}
         />
       ) : (
         <div className="grid md:grid-cols-3 gap-4">
@@ -447,35 +489,80 @@ export function Dashboard() {
 
 export function Subjects() {
   const { tr } = useI18n();
+  const nav2 = useNavigate();
+  const [tab, setTab] = useState<'active' | 'archived'>('active');
   const subjects = useSubjects();
+  const archived = useArchivedSubjects();
+  const list = tab === 'active' ? subjects : archived;
+  const data = list.data ?? [];
+  const reloadAll = () => {
+    subjects.reload();
+    archived.reload();
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-extrabold">{tr('Minhas matérias')}</h1>
-        <Btn to="/materias/nova">
+        <Btn onClick={() => nav2('/materias/nova')}>
           <Plus size={18} />
           {tr('Nova matéria')}
         </Btn>
       </div>
-      {subjects.loading ? (
+
+      <div
+        role="tablist"
+        aria-label={tr('Minhas matérias')}
+        className="mb-6 inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white p-1"
+      >
+        {([
+          ['active', tr('Ativas')],
+          ['archived', tr('Arquivadas')],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={tab === value}
+            onClick={() => setTab(value)}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              tab === value ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {list.loading ? (
         <div className="grid sm:grid-cols-2 gap-4">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-52" />
           ))}
         </div>
-      ) : subjects.error ? (
-        <ErrorState message={subjects.error} onRetry={subjects.reload} />
-      ) : (subjects.data ?? []).length === 0 ? (
+      ) : list.error ? (
+        <ErrorState message={list.error} onRetry={list.reload} />
+      ) : data.length === 0 ? (
         <EmptyState
           icon={<Icon name="livro" size={56} />}
-          title={tr('Nenhuma matéria ainda')}
-          desc={tr('Crie uma matéria e envie seus materiais para começar.')}
-          action={<Btn to="/materias/nova">{tr('Nova matéria')}</Btn>}
+          title={tab === 'active' ? tr('Nenhuma matéria ainda') : tr('Nenhuma matéria arquivada')}
+          desc={
+            tab === 'active'
+              ? tr('Crie uma matéria e envie seus materiais para começar.')
+              : tr('Arquive uma matéria para vê-la aqui. Você pode reativá-la quando quiser.')
+          }
+          action={tab === 'active' ? <Btn onClick={() => nav2('/materias/nova')}>{tr('Nova matéria')}</Btn> : undefined}
         />
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
-          {(subjects.data ?? []).map((s) => (
-            <SubjectCard key={s.id} s={s} manage onChanged={subjects.reload} />
+          {data.map((s) => (
+            <SubjectCard
+              key={s.id}
+              s={s}
+              manage={tab === 'active'}
+              archived={tab === 'archived'}
+              onChanged={reloadAll}
+            />
           ))}
         </div>
       )}
@@ -1155,7 +1242,7 @@ export function Stats() {
       <h1 className="text-3xl font-extrabold">{tr('Sua evolução')}</h1>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          ['fogo15', tr('{n} dias de sequência', { n: profile?.streak ?? 0 })],
+          ['fogo30', tr('{n} dias de sequência', { n: profile?.streak ?? 0 })],
           ['trofeu', tr('{n} XP', { n: profile?.xp ?? 0 })],
           ['livro', tr('{n} questões respondidas', { n: answered })],
           ['alvo', tr('{pct}% de aproveitamento', { pct: acc })],
@@ -1368,8 +1455,22 @@ export function Profile() {
     }
   };
   const removeAccount = async () => {
-    if (!confirm(tr('Excluir sua conta e TODOS os seus dados? Esta ação não pode ser desfeita.'))) return;
-    if (!confirm(tr('Tem certeza absoluta? Materiais, questões e histórico serão apagados.'))) return;
+    const first = await confirmDialog({
+      title: tr('Excluir conta'),
+      message: tr('Tem certeza que deseja excluir sua conta e TODOS os seus dados?'),
+      note: tr('Esta ação não pode ser desfeita.'),
+      confirmLabel: tr('Continuar'),
+      danger: true,
+    });
+    if (!first) return;
+    const second = await confirmDialog({
+      title: tr('Tem certeza absoluta?'),
+      message: tr('Materiais, questões e histórico serão apagados permanentemente.'),
+      note: tr('Não há como recuperar depois.'),
+      confirmLabel: tr('Excluir tudo'),
+      danger: true,
+    });
+    if (!second) return;
     setBusy(true);
     setMsg(null);
     try {
@@ -1569,6 +1670,7 @@ export function Profile() {
 export function Flashcards() {
   const { tr } = useI18n();
   const { id } = useParams();
+  const nav2 = useNavigate();
   const { session } = useAuth();
   const userId = session?.user.id;
   const [idx, setIdx] = useState(0);
@@ -1606,7 +1708,7 @@ export function Flashcards() {
           icon="🎯"
           title={cards.length === 0 ? tr('Nenhum flashcard por aqui ainda') : tr('Você revisou todos os flashcards de hoje!')}
           desc={cards.length === 0 ? tr('Resolva sessões para os flashcards aparecerem.') : tr('Volte amanhã para revisar de novo. 🗓️')}
-          action={<Btn to="/dashboard">{tr('Voltar ao início')}</Btn>}
+          action={<Btn onClick={() => nav2('/dashboard')}>{tr('Voltar ao início')}</Btn>}
         />
       </div>
     );

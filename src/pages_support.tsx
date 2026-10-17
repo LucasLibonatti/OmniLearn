@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Send } from 'lucide-react';
-import { Btn, Card, Logo, LangSwitch } from './ui';
+import { Btn, Card, Logo, LangSwitch, useInAppShell } from './ui';
 import { Icon } from './icons';
 import { Socials } from './components/Socials';
 import { sendSupport } from './services/support';
@@ -11,7 +11,22 @@ import { useI18n, type TKey } from './i18n';
 function Shell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   const { session } = useAuth();
   const { t } = useI18n();
+  const inApp = useInAppShell();
   const back = session ? '/dashboard' : '/';
+  if (inApp) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Icon name="chat" size={52} className="float" />
+          <div>
+            <h1 className="text-3xl font-black">{title}</h1>
+            <p className="text-slate-500 font-semibold">{subtitle}</p>
+          </div>
+        </div>
+        {children}
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen mesh">
       <header className="max-w-3xl mx-auto flex items-center justify-between gap-3 p-5">
