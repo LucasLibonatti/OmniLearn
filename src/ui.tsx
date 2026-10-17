@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, GraduationCap } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
+import { iconSrc } from './icons';
 
 export const Card = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
-  <div className={`rounded-3xl bg-white border border-slate-100 shadow-sm p-5 ${className}`}>{children}</div>
+  <div
+    className={`rounded-3xl bg-white border border-slate-100 shadow-[0_4px_18px_-8px_rgba(15,23,42,0.18)] p-5 card3d ${className}`}
+  >
+    {children}
+  </div>
 );
 
 export const Btn = ({
@@ -23,7 +28,7 @@ export const Btn = ({
   disabled?: boolean;
   type?: 'button' | 'submit';
 }) => {
-  const c = `inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-semibold transition active:scale-95 disabled:opacity-40 ${v === 'p' ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'} ${className}`;
+  const c = `inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-semibold transition active:scale-95 disabled:opacity-40 ${v === 'p' ? 'bg-gradient-to-b from-indigo-500 to-indigo-600 text-white hover:from-indigo-500 hover:to-indigo-700 shadow-lg shadow-indigo-300/50' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm'} ${className}`;
   return to ? (
     <Link to={to} className={c}>
       {children}
@@ -136,6 +141,17 @@ export function Select({
   );
 }
 
+export const BrandIcon = ({ size = 44, className = '' }: { size?: number; className?: string }) => (
+  <img
+    src={iconSrc.heroi}
+    alt=""
+    aria-hidden
+    draggable={false}
+    style={{ width: size, height: size }}
+    className={`inline-block object-contain select-none icon3d ${className}`}
+  />
+);
+
 export const Ring = ({ v, size = 150 }: { v: number; size?: number }) => {
   const r = size / 2 - 10;
   const c = 2 * Math.PI * r;
@@ -162,11 +178,14 @@ export const Ring = ({ v, size = 150 }: { v: number; size?: number }) => {
 };
 
 export const Logo = () => (
-  <Link to="/" className="flex items-center gap-2 font-extrabold text-lg">
-    <span className="grid place-items-center w-9 h-9 rounded-xl bg-indigo-600 text-white">
-      <GraduationCap size={20} />
-    </span>
-    OmniLearn
+  <Link to="/" className="group flex items-center gap-2.5">
+    <img
+      src={iconSrc.heroi}
+      alt="OmniLearn"
+      draggable={false}
+      className="w-11 h-11 object-contain icon3d transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
+    />
+    <span className="text-xl font-extrabold tracking-tight">OmniLearn</span>
   </Link>
 );
 

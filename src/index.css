@@ -3,10 +3,35 @@
 @keyframes xp{0%{opacity:0;transform:translateY(0)}20%{opacity:1}100%{opacity:0;transform:translateY(-70px)}}
 @keyframes pop{0%{transform:scale(.97)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
 @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@keyframes floaty{0%,100%{transform:translateY(0) rotate(var(--r,0deg))}50%{transform:translateY(-12px) rotate(var(--r,0deg))}}
 .fade{animation:fade .35s ease both}.xp{animation:xp 1s ease forwards}.pop{animation:pop .3s}.shake{animation:shake .3s}
 body{font-family:Inter,system-ui,sans-serif;background:#fafaf9;color:#0f172a}
 *:focus-visible{outline:2px solid #4f46e5;outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+/* ===== Efeitos 3D ===== */
+.icon3d{filter:drop-shadow(0 8px 12px rgba(15,23,42,.28))}
+.float{animation:float 4s ease-in-out infinite}
+.floaty{animation:floaty 5s ease-in-out infinite}
+.perspective{perspective:1200px}
+.card3d{transition:transform .3s ease,box-shadow .3s ease;transform-style:preserve-3d;will-change:transform}
+.card3d:hover{transform:translateY(-5px) rotateX(2.5deg) rotateY(-2.5deg);box-shadow:0 22px 45px -18px rgba(79,70,229,.45)}
+.tilt{transition:transform .3s ease;transform:rotateX(4deg) rotateY(-3deg) rotateZ(.5deg);transform-style:preserve-3d}
+.tilt:hover{transform:rotateX(0) rotateY(0) rotateZ(0) translateY(-3px)}
+.mesh{background:
+  radial-gradient(60% 55% at 15% 20%,rgba(99,102,241,.16),transparent 60%),
+  radial-gradient(55% 50% at 90% 10%,rgba(245,158,11,.14),transparent 60%),
+  radial-gradient(60% 55% at 80% 95%,rgba(16,185,129,.12),transparent 60%)}
+.dark .mesh{background:
+  radial-gradient(60% 55% at 15% 20%,rgba(99,102,241,.22),transparent 60%),
+  radial-gradient(55% 50% at 90% 10%,rgba(245,158,11,.14),transparent 60%),
+  radial-gradient(60% 55% at 80% 95%,rgba(16,185,129,.14),transparent 60%)}
+.shine{position:relative;overflow:hidden}
+.shine::after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 40%,rgba(255,255,255,.45) 50%,transparent 60%);transform:translateX(-120%);transition:transform .8s ease}
+.shine:hover::after{transform:translateX(120%)}
+.rotate3d{transform-style:preserve-3d;transition:transform .4s ease}
+.rotate3d:hover{transform:rotateY(12deg) rotateX(-6deg)}
 
 /* ===== Tema escuro ===== */
 .dark{color-scheme:dark}

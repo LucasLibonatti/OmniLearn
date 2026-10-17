@@ -12,6 +12,8 @@ const AuthPage = lazy(() => import('./AuthPage'));
 const Session = lazy(() => import('./Session'));
 const Guidelines = page(() => import('./pages_legal'), 'Guidelines');
 const NotFound = page(() => import('./pages_legal'), 'NotFound');
+const Support = page(() => import('./pages_support'), 'Support');
+const SocialsPage = page(() => import('./pages_support'), 'SocialsPage');
 const Dashboard = page(() => import('./pages_app'), 'Dashboard');
 const Layout = page(() => import('./pages_app'), 'Layout');
 const Subjects = page(() => import('./pages_app'), 'Subjects');
@@ -40,6 +42,8 @@ export default function App() {
             <Route path="/login" element={<AuthPage mode="login" />} />
             <Route path="/cadastro" element={<AuthPage mode="signup" />} />
             <Route path="/diretrizes" element={<Guidelines />} />
+            <Route path="/suporte" element={<Support />} />
+            <Route path="/redes" element={<SocialsPage />} />
             <Route path="/sessao/:id" element={<RequireAuth><Session /></RequireAuth>} />
             <Route path="/materias/:id/imprimir" element={<RequireAuth><PrintSubject /></RequireAuth>} />
             <Route element={<RequireAuth><Layout /></RequireAuth>}>

@@ -24,9 +24,11 @@ import {
   Printer,
   Share2,
   Layers,
+  LifeBuoy,
 } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { Avatar, Btn, Card, Bar, Ring, Logo } from './ui';
+import { EmojiIcon, Icon, flameFor, type IconName } from './icons';
 import { EmptyState, ErrorState, Generating, Skeleton, Spinner } from './components/states';
 import { useAuth } from './auth';
 import { useAsync } from './hooks/useAsync';
@@ -135,6 +137,20 @@ export function Layout() {
           ))}
         </nav>
         <div className="mt-auto space-y-2">
+          <Link
+            to="/suporte"
+            className="flex items-center gap-3 rounded-2xl px-4 py-3 font-medium text-slate-600 hover:bg-slate-50"
+          >
+            <LifeBuoy size={20} />
+            Suporte
+          </Link>
+          <Link
+            to="/redes"
+            className="flex items-center gap-3 rounded-2xl px-4 py-3 font-medium text-slate-600 hover:bg-slate-50"
+          >
+            <Share2 size={20} />
+            Redes sociais
+          </Link>
           <Link
             to="/diretrizes"
             className="flex items-center gap-3 rounded-2xl px-4 py-3 font-medium text-slate-600 hover:bg-slate-50"
@@ -272,7 +288,9 @@ export function SubjectCard({
         ) : (
           <span className={`rounded-xl px-3 py-1 text-sm font-bold ${s.tone ?? 'bg-slate-100 text-slate-700'}`}>{s.name}</span>
         )}
-        <span className="text-sm text-orange-500 font-semibold">🔥 {s.streak}</span>
+        <span className="inline-flex items-center gap-1 text-sm text-orange-500 font-semibold">
+          <Icon name={flameFor(s.streak)} size={16} /> {s.streak}
+        </span>
       </div>
       <h3 className="font-bold text-lg mt-3">{s.topic || s.name}</h3>
       <p className="text-sm text-slate-500">
@@ -343,7 +361,7 @@ export function Dashboard() {
 
       <div className="grid md:grid-cols-3 gap-4">
         <Card className="bg-gradient-to-br from-orange-50 to-amber-50">
-          <p className="text-5xl">🔥</p>
+          <Icon name={flameFor(streak)} size={56} className="float" />
           <p className="text-4xl font-extrabold mt-2">{streak} {streak === 1 ? 'dia' : 'dias'}</p>
           <p className="text-slate-600">
             {streak === 0 ? 'Comece sua sequência hoje!' : 'Você está em uma sequência incrível!'}
@@ -385,7 +403,7 @@ export function Dashboard() {
         <ErrorState message={subjects.error} onRetry={subjects.reload} />
       ) : subjectsData.length === 0 ? (
         <EmptyState
-          icon="📚"
+          icon={<Icon name="livro" size={56} />}
           title="Bem-vindo ao OmniLearn!"
           desc="Crie sua primeira matéria, envie seus slides e deixe a IA montar seus exercícios."
           action={<Btn to="/materias/nova">Criar minha primeira matéria</Btn>}
@@ -443,7 +461,7 @@ export function Subjects() {
         <ErrorState message={subjects.error} onRetry={subjects.reload} />
       ) : (subjects.data ?? []).length === 0 ? (
         <EmptyState
-          icon="📚"
+          icon={<Icon name="livro" size={56} />}
           title="Nenhuma matéria ainda"
           desc="Crie uma matéria e envie seus materiais para começar."
           action={<Btn to="/materias/nova">Nova matéria</Btn>}
@@ -592,7 +610,9 @@ export function SubjectPage() {
 
       {(summary || sumBusy || sumErr) && (
         <Card className="bg-indigo-50 border-indigo-100">
-          <h2 className="font-bold mb-2">✨ Resumo da IA</h2>
+          <h2 className="font-bold mb-2 inline-flex items-center gap-2">
+            <Icon name="estrela" size={22} /> Resumo da IA
+          </h2>
           {sumBusy && <p className="text-sm text-slate-600">Lendo seus materiais e resumindo…</p>}
           {sumErr && <p className="text-sm text-red-600">{sumErr}</p>}
           {summary && (
@@ -977,7 +997,7 @@ export function Result() {
 
   return (
     <div className="max-w-xl mx-auto text-center space-y-6">
-      <div className="text-6xl pop">🎉</div>
+      <Icon name="trofeu" size={72} className="pop mx-auto" />
       <h1 className="text-3xl font-extrabold">Sessão concluída!</h1>
       <p className="text-slate-600">Você completou sua sessão de hoje.</p>
       <div className="grid grid-cols-3 gap-3">
@@ -995,8 +1015,11 @@ export function Result() {
         </Card>
       </div>
       <Card className="text-left">
-        <p className="font-bold text-orange-600 mb-3">
-          {profile && profile.streak > 0 ? `Sua sequência continua! 🔥 ${profile.streak} ${profile.streak === 1 ? 'dia' : 'dias'}` : 'Comece sua sequência! 🔥'}
+        <p className="font-bold text-orange-600 mb-3 flex items-center gap-1.5">
+          <Icon name={flameFor(profile?.streak ?? 0)} size={22} />
+          {profile && profile.streak > 0
+            ? `Sua sequência continua! ${profile.streak} ${profile.streak === 1 ? 'dia' : 'dias'}`
+            : 'Comece sua sequência!'}
         </p>
         <Week dates={week} />
       </Card>
@@ -1016,7 +1039,7 @@ export function Result() {
           <div className="flex flex-wrap gap-3">
             {achievements.map((a) => (
               <span key={a.id} className="inline-flex items-center gap-2 rounded-2xl bg-amber-50 px-3 py-2 font-semibold pop">
-                {a.icon} {a.title}
+                <EmojiIcon emoji={a.icon} size={22} /> {a.title}
               </span>
             ))}
           </div>
@@ -1117,13 +1140,13 @@ export function Stats() {
       <h1 className="text-3xl font-extrabold">Sua evolução</h1>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          ['🔥', `${profile?.streak ?? 0} dias de sequência`],
-          ['🏆', `${profile?.xp ?? 0} XP`],
-          ['📚', `${answered} questões respondidas`],
-          ['🎯', `${acc}% de aproveitamento`],
+          ['fogo15', `${profile?.streak ?? 0} dias de sequência`],
+          ['trofeu', `${profile?.xp ?? 0} XP`],
+          ['livro', `${answered} questões respondidas`],
+          ['alvo', `${acc}% de aproveitamento`],
         ].map(([e, t]) => (
           <Card key={t}>
-            <div className="text-2xl">{e}</div>
+            <Icon name={e as IconName} size={32} />
             <p className="font-bold mt-1">{t}</p>
           </Card>
         ))}
@@ -1213,7 +1236,7 @@ export function Achievements() {
         <div className="grid sm:grid-cols-2 gap-4">
           {(data.data ?? []).map((a) => (
             <Card key={a.id} className={`flex gap-4 items-center ${a.unlocked ? '' : 'opacity-50 grayscale'}`}>
-              <span className="text-4xl">{a.icon}</span>
+              <EmojiIcon emoji={a.icon} size={44} />
               <div>
                 <p className="font-bold">{a.title}</p>
                 <p className="text-sm text-slate-600">{a.descr}</p>
@@ -1381,7 +1404,9 @@ export function Profile() {
         <p className="text-sm text-slate-500 mt-1">
           XP: {xpInLevel(xp)} / {XP_PER_LEVEL}
         </p>
-        <p className="mt-2 font-semibold">🔥 Sequência: {p?.streak ?? 0} dias</p>
+        <p className="mt-2 font-semibold inline-flex items-center gap-1.5">
+          <Icon name={flameFor(p?.streak ?? 0)} size={20} /> Sequência: {p?.streak ?? 0} dias
+        </p>
       </Card>
 
       <div className="grid grid-cols-3 gap-3 text-center">
@@ -1443,12 +1468,28 @@ export function Profile() {
         </div>
         <div className="flex items-center justify-between gap-3 py-3 border-t border-slate-100">
           <div>
-            <p className="font-medium">Diretrizes e termos</p>
-            <p className="text-sm text-slate-500">Regras de uso, IA e privacidade.</p>
+            <p className="font-medium">Suporte</p>
+            <p className="text-sm text-slate-500">Precisa de ajuda? Fale com a gente.</p>
           </div>
-          <Link to="/diretrizes" className="text-sm font-semibold text-indigo-600 shrink-0">
+          <Link to="/suporte" className="font-semibold text-indigo-600">
             Abrir
           </Link>
+        </div>
+        <div className="flex items-center justify-between gap-3 py-3 border-t border-slate-100">
+          <div>
+            <p className="font-medium">Redes sociais</p>
+            <p className="text-sm text-slate-500">Acompanhe as novidades do OmniLearn.</p>
+          </div>
+          <Link to="/redes" className="font-semibold text-indigo-600">
+            Ver
+          </Link>
+        </div>
+        <div className="flex items-center justify-between gap-3 py-3 border-t border-slate-100">
+          <div>
+            <p className="font-medium">Diretrizes e termos</p>
+            <p className="text-sm text-slate-500">Um espaço para tirar dúvidas e enviar sugestões.</p>
+          </div>
+          <Link to="/diretrizes" className="font-semibold text-indigo-600">Ver</Link>
         </div>
       </Card>
 

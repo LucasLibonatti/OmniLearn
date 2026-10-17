@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Check, X, Clock, Sparkles } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { Btn, Bar, Card, Select } from './ui';
+import { Icon } from './icons';
 import { shuffle } from './lib/shuffle';
 import { EmptyState, ErrorState, Spinner } from './components/states';
 import { useAuth } from './auth';
@@ -306,8 +307,11 @@ export default function Session() {
           )}
 
           {revealed && (
-            <span key={idx} className="xp absolute right-2 -top-6 font-extrabold text-amber-500 text-xl pointer-events-none">
-              +{gain} XP{bonus ? ' 🔥' : ''}
+            <span
+              key={idx}
+              className="xp absolute right-2 -top-6 inline-flex items-center gap-1 font-extrabold text-amber-500 text-xl pointer-events-none"
+            >
+              +{gain} XP{bonus && <Icon name="fogo30" size={22} />}
             </span>
           )}
         </div>
@@ -345,7 +349,9 @@ export default function Session() {
           )}
           {explain && (
             <div className="mt-3 rounded-2xl bg-white/70 border border-indigo-100 p-3">
-              <p className="text-xs font-bold text-indigo-600 mb-1">✨ Explicação da IA</p>
+              <p className="text-xs font-bold text-indigo-600 mb-1 inline-flex items-center gap-1.5">
+                <Icon name="estrela" size={16} /> Explicação da IA
+              </p>
               <p
                 className="text-sm text-slate-700 whitespace-pre-line"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(explain, { ALLOWED_TAGS: ['strong'] }) }}
