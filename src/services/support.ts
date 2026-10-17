@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { tr } from '../i18n';
 
 export interface SupportInput {
   name?: string;
@@ -14,7 +15,7 @@ export interface SupportInput {
  */
 export async function sendSupport(input: SupportInput): Promise<void> {
   const message = input.message.trim();
-  if (message.length < 5) throw new Error('Escreva um pouco mais sobre o que você precisa.');
+  if (message.length < 5) throw new Error(tr('Escreva um pouco mais sobre o que você precisa.'));
 
   const { error } = await supabase.from('support_messages').insert({
     name: input.name?.trim() || null,
@@ -22,5 +23,5 @@ export async function sendSupport(input: SupportInput): Promise<void> {
     subject: input.subject?.trim() || null,
     message,
   });
-  if (error) throw new Error('Não foi possível enviar sua mensagem. Tente novamente mais tarde.');
+  if (error) throw new Error(tr('Não foi possível enviar sua mensagem. Tente novamente mais tarde.'));
 }

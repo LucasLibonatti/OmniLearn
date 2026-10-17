@@ -1,10 +1,11 @@
 import { supabase } from '../lib/supabase';
+import { tr } from '../i18n';
 
 /** Exclui a conta e todos os dados do usuário via Edge Function (que usa a service role). */
 export async function deleteAccount(): Promise<void> {
   const { data, error } = await supabase.functions.invoke('delete-account');
   if (error) {
-    let message = 'Não foi possível excluir sua conta agora.';
+    let message = tr('Não foi possível excluir sua conta agora.');
     const ctx = (error as { context?: Response }).context;
     if (ctx) {
       try {
@@ -13,7 +14,7 @@ export async function deleteAccount(): Promise<void> {
       } catch {
         /* mantém a mensagem padrão */
       }
-      if (ctx.status === 404) message = 'A função de exclusão ainda não foi publicada no Supabase.';
+      if (ctx.status === 404) message = tr('A função de exclusão ainda não foi publicada no Supabase.');
     }
     throw new Error(message);
   }

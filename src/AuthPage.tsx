@@ -3,17 +3,18 @@ import { Link, Navigate } from 'react-router-dom';
 import { Sun, Moon } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useAuth } from './auth';
-import { Btn, Card, Logo } from './ui';
+import { Btn, Card, Logo, LangSwitch } from './ui';
 import { useSettings } from './hooks/useSettings';
+import { useI18n } from './i18n';
 
 const Field = (p: { label: string; type?: string; value: string; onChange: (v: string) => void }) => (
   <label className="block">
-    <span className="text-sm font-semibold">{p.label}</span>
+    <span className="text-sm font-extrabold">{p.label}</span>
     <input
       type={p.type ?? 'text'}
       value={p.value}
       onChange={(e) => p.onChange(e.target.value)}
-      className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 bg-white"
+      className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 bg-white font-semibold"
     />
   </label>
 );
@@ -21,6 +22,7 @@ const Field = (p: { label: string; type?: string; value: string; onChange: (v: s
 export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
   const { session, signInWithGoogle } = useAuth();
   const { theme, toggleTheme } = useSettings();
+  const { t } = useI18n();
   const login = mode === 'login';
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -37,18 +39,18 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
     setMsg('');
     if (login) {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setMsg('E-mail ou senha incorretos.');
+      if (error) setMsg(t('auth.err.login'));
     } else {
       if (!name.trim()) {
-        setMsg('Informe seu nome.');
+        setMsg(t('auth.err.name'));
       } else if (password.length < 6) {
-        setMsg('A senha precisa ter pelo menos 6 caracteres.');
+        setMsg(t('auth.err.short'));
       } else if (password !== confirm) {
-        setMsg('As senhas não coincidem.');
+        setMsg(t('auth.err.match'));
       } else {
         const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { name: name.trim() } } });
         if (error) setMsg(error.message);
-        else if (!data.session) setMsg('Conta criada! Enviamos um e-mail para você confirmar. Depois é só entrar.');
+        else if (!data.session) setMsg(t('auth.done.signup'));
       }
     }
     setBusy(false);
@@ -56,37 +58,40 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
 
   return (
     <div className="min-h-screen grid place-items-center p-5 bg-gradient-to-b from-indigo-50 to-white">
-      <button
-        aria-label={theme === 'dark' ? 'Usar tema claro' : 'Usar tema escuro'}
-        onClick={toggleTheme}
-        className="fixed top-4 right-4 p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-      >
-        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-      </button>
+      <div className="fixed top-4 right-4 flex items-center gap-2">
+        <LangSwitch />
+        <button
+          aria-label={theme === 'dark' ? t('theme.light') : t('theme.dark')}
+          onClick={toggleTheme}
+          className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition"
+        >
+          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
+      </div>
       <div className="w-full max-w-md fade">
         <div className="mb-6 flex justify-center"><Logo /></div>
         <Card className="p-8">
-          <h1 className="text-2xl font-extrabold">{login ? 'Bem-vindo de volta' : 'Comece sua jornada'}</h1>
+          <h1 className="text-2xl font-black">{login ? t('auth.login.title') : t('auth.signup.title')}</h1>
           <form className="mt-6 space-y-4" onSubmit={submit}>
-            {!login && <Field label="Nome" value={name} onChange={setName} />}
-            <Field label="E-mail" type="email" value={email} onChange={setEmail} />
-            <Field label="Senha (mínimo 6 caracteres)" type="password" value={password} onChange={setPassword} />
-            {!login && <Field label="Repetir senha" type="password" value={confirm} onChange={setConfirm} />}
-            {msg && <p role="alert" className="text-sm font-medium text-red-600">{msg}</p>}
+            {!login && <Field label={t('auth.name')} value={name} onChange={setName} />}
+            <Field label={t('auth.email')} type="email" value={email} onChange={setEmail} />
+            <Field label={t('auth.password')} type="password" value={password} onChange={setPassword} />
+            {!login && <Field label={t('auth.confirm')} type="password" value={confirm} onChange={setConfirm} />}
+            {msg && <p role="alert" className="text-sm font-bold text-red-600">{msg}</p>}
             <button
               type="submit"
               disabled={busy}
-              className="w-full rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-700 disabled:opacity-40"
+              className="btn3d w-full rounded-2xl bg-indigo-600 border-b-[#312e81] px-5 py-3 font-extrabold text-white hover:bg-indigo-500 disabled:opacity-40"
             >
-              {login ? 'Entrar' : 'Criar minha conta'}
+              {login ? t('auth.submit.login') : t('auth.submit.signup')}
             </button>
           </form>
-          <Btn v="s" className="w-full mt-3" onClick={signInWithGoogle}>Continuar com Google</Btn>
-          <p className="mt-6 text-center text-sm text-slate-600">
+          <Btn v="s" className="w-full mt-3" onClick={signInWithGoogle}>{t('auth.google')}</Btn>
+          <p className="mt-6 text-center text-sm font-semibold text-slate-600">
             {login ? (
-              <>Não possui uma conta? <Link className="font-semibold text-indigo-600" to="/cadastro">Criar conta</Link></>
+              <>{t('auth.noAccount')} <Link className="font-extrabold text-indigo-600" to="/cadastro">{t('auth.createAccount')}</Link></>
             ) : (
-              <>Já tem conta? <Link className="font-semibold text-indigo-600" to="/login">Entrar</Link></>
+              <>{t('auth.hasAccount')} <Link className="font-extrabold text-indigo-600" to="/login">{t('auth.submit.login')}</Link></>
             )}
           </p>
         </Card>

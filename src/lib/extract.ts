@@ -2,6 +2,7 @@
 import * as pdfjs from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import JSZip from 'jszip';
+import { tr } from '../i18n';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -59,5 +60,5 @@ export async function extractText(file: File): Promise<Extracted> {
   const name = file.name.toLowerCase();
   if (name.endsWith('.pdf')) return extractPdf(file);
   if (name.endsWith('.pptx')) return extractPptx(file);
-  throw new Error('Formato não suportado. Envie PDF ou PPTX.');
+  throw new Error(tr('Formato não suportado. Envie PDF ou PPTX.'));
 }

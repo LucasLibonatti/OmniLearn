@@ -2,6 +2,7 @@ import { lazy, Suspense, type ComponentType } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { AuthProvider, RequireAuth } from './auth';
 import { SettingsProvider } from './hooks/useSettings';
+import { I18nProvider } from './i18n';
 import { Spinner } from './components/states';
 
 const page = (mod: () => Promise<{ [k: string]: unknown }>, name: string) =>
@@ -34,8 +35,9 @@ function fallback() {
 
 export default function App() {
   return (
-    <SettingsProvider>
-      <AuthProvider>
+    <I18nProvider>
+      <SettingsProvider>
+        <AuthProvider>
         <Suspense fallback={fallback()}>
           <Routes>
             <Route path="/" element={<Landing />} />
@@ -63,7 +65,8 @@ export default function App() {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
-      </AuthProvider>
-    </SettingsProvider>
+        </AuthProvider>
+      </SettingsProvider>
+    </I18nProvider>
   );
 }

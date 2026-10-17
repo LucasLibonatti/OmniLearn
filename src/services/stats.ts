@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { addDays, lastNDates, spDate, todaySP, weekLabel } from '../lib/dates';
+import { tr } from '../i18n';
 import type { WeakSpot } from '../types';
 
 function startOfDayISO(ymd: string): string {
@@ -125,7 +126,7 @@ export async function topicPerformance(userId: string, subjectId: string): Promi
   }>) {
     const q = Array.isArray(row.questions) ? row.questions[0] : row.questions;
     if (q?.subject_id !== subjectId) continue;
-    const topic = q?.topic ?? 'Geral';
+    const topic = q?.topic ?? tr('Geral');
     const e = map.get(topic) ?? { c: 0, t: 0 };
     e.t++;
     if (row.correct) e.c++;
@@ -137,10 +138,10 @@ export async function topicPerformance(userId: string, subjectId: string): Promi
 }
 
 export function levelOf(acc: number): { level: string; dot: string } {
-  if (acc < 0.5) return { level: 'Precisa revisar', dot: '🔴' };
-  if (acc < 0.7) return { level: 'Em desenvolvimento', dot: '🟠' };
-  if (acc < 0.85) return { level: 'Quase lá', dot: '🟡' };
-  return { level: 'Dominando', dot: '🟢' };
+  if (acc < 0.5) return { level: tr('Precisa revisar'), dot: '🔴' };
+  if (acc < 0.7) return { level: tr('Em desenvolvimento'), dot: '🟠' };
+  if (acc < 0.85) return { level: tr('Quase lá'), dot: '🟡' };
+  return { level: tr('Dominando'), dot: '🟢' };
 }
 
 export async function weakSpots(userId: string): Promise<WeakSpot[]> {
@@ -157,7 +158,7 @@ export async function weakSpots(userId: string): Promise<WeakSpot[]> {
     questions: { topic: string; subject_id: string } | { topic: string; subject_id: string }[] | null;
   }>) {
     const q = Array.isArray(row.questions) ? row.questions[0] : row.questions;
-    const topic = q?.topic ?? 'Geral';
+    const topic = q?.topic ?? tr('Geral');
     const e = map.get(topic) ?? { c: 0, w: 0, subject_id: q?.subject_id ?? '' };
     if (row.correct) e.c++;
     else e.w++;

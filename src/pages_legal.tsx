@@ -1,91 +1,74 @@
 import { Link } from 'react-router-dom';
-import { Btn, Card, Logo } from './ui';
+import { Btn, Card, Logo, LangSwitch } from './ui';
+import { useI18n } from './i18n';
 
 function LegalShell({ title, updated, children }: { title: string; updated: string; children: React.ReactNode }) {
+  const { t } = useI18n();
   return (
     <div className="min-h-screen">
-      <header className="max-w-3xl mx-auto flex items-center justify-between p-5">
+      <header className="max-w-3xl mx-auto flex items-center justify-between gap-3 p-5">
         <Logo />
-        <Btn v="s" to="/">
-          Voltar
-        </Btn>
+        <div className="flex items-center gap-2">
+          <LangSwitch className="hidden sm:inline-flex" />
+          <Btn v="s" to="/">
+            {t('nav.back')}
+          </Btn>
+        </div>
       </header>
       <main className="max-w-3xl mx-auto px-5 pb-20 fade">
-        <h1 className="text-3xl font-extrabold">{title}</h1>
-        <p className="text-sm text-slate-500 mt-1">Última atualização: {updated}</p>
-        <Card className="mt-6 space-y-5 leading-relaxed">{children}</Card>
-        <p className="text-xs text-slate-400 mt-4">
-          Este texto é um modelo simplificado e não constitui aconselhamento jurídico. Revise com um profissional antes de
-          usar em produção.
+        <h1 className="text-3xl font-black">{title}</h1>
+        <p className="text-sm font-semibold text-slate-500 mt-1">
+          {t('legal.updated')}: {updated}
         </p>
+        <Card className="mt-6 space-y-5 leading-relaxed font-semibold">{children}</Card>
+        <p className="text-xs font-semibold text-slate-400 mt-4">{t('legal.disclaimer')}</p>
+        <div className="mt-6 flex justify-center sm:hidden">
+          <LangSwitch />
+        </div>
       </main>
     </div>
   );
 }
 
-const H = ({ children }: { children: React.ReactNode }) => <h2 className="font-bold text-lg pt-2">{children}</h2>;
+const H = ({ children }: { children: React.ReactNode }) => <h2 className="font-black text-lg pt-2">{children}</h2>;
 
 export function Guidelines() {
+  const { t } = useI18n();
   return (
-    <LegalShell title="Diretrizes e Termos de Uso" updated="hoje">
-      <p>
-        Bem-vindo ao <strong>OmniLearn</strong>. Ao criar uma conta e usar o serviço, você concorda com as regras abaixo.
-        Escrevemos tudo em linguagem simples para facilitar.
-      </p>
+    <LegalShell title={t('legal.title')} updated={t('legal.today')}>
+      <p>{t('legal.welcome')}</p>
 
-      <H>Sobre o serviço</H>
-      <p>
-        O OmniLearn é uma ferramenta de estudos que usa inteligência artificial para transformar os materiais que você
-        envia (PDF ou PPTX) em perguntas e exercícios de revisão. É um apoio ao estudo, não substitui professores, livros,
-        cursos ou orientação profissional.
-      </p>
+      <H>{t('legal.h.service')}</H>
+      <p>{t('legal.p.service')}</p>
 
-      <H>Uso aceitável</H>
+      <H>{t('legal.h.acceptable')}</H>
       <ul className="list-disc pl-5 space-y-1">
-        <li>Você é responsável pelo conteúdo que envia e por ter o direito de usá-lo.</li>
-        <li>Não envie dados pessoais sensíveis de terceiros nem conteúdo ilegal, ofensivo ou protegido por direitos autorais sem autorização.</li>
-        <li>Não é permitido tentar burlar limites de uso, automatizar acessos de forma abusiva ou explorar falhas do sistema.</li>
-        <li>A conta é pessoal. Não compartilhe suas credenciais.</li>
+        <li>{t('legal.li.1')}</li>
+        <li>{t('legal.li.2')}</li>
+        <li>{t('legal.li.3')}</li>
+        <li>{t('legal.li.4')}</li>
       </ul>
 
-      <H>Conteúdo gerado por IA</H>
-      <p>
-        As questões, respostas e explicações são geradas automaticamente por IA e <strong>podem conter erros</strong>.
-        Nós não garantimos que estejam corretas, completas ou atualizadas. Confira sempre com seu material de estudo e
-        use o bom senso. Este é um apoio ao estudo; verifique informações importantes.
-      </p>
+      <H>{t('legal.h.ai')}</H>
+      <p>{t('legal.p.ai')}</p>
 
-      <H>Isenção de responsabilidade</H>
-      <p>
-        O OmniLearn é fornecido "como está", sem garantias de qualquer tipo. Não nos responsabilizamos por decisões,
-        resultados acadêmicos, notas, aprovações ou quaisquer danos decorrentes do uso indevido do conteúdo gerado ou
-        das informações exibidas. O índice de "domínio estimado" e as estatísticas são estimativas e{' '}
-        <strong>não representam uma probabilidade real de aprovação</strong>.
-      </p>
+      <H>{t('legal.h.law')}</H>
+      <p>{t('legal.p.law')}</p>
 
-      <H>Privacidade e seus dados</H>
-      <p>
-        Guardamos apenas o necessário para o funcionamento do serviço: seus dados de conta, os materiais enviados, as
-        questões geradas e seu histórico de respostas. Usamos provedores de nuvem e um serviço de IA para processar o
-        conteúdo. Você pode excluir sua conta a qualquer momento na página de perfil, o que remove seus dados e arquivos.
-      </p>
+      <H>{t('legal.h.privacy')}</H>
+      <p>{t('legal.p.privacy')}</p>
 
-      <H>Propriedade dos materiais</H>
-      <p>
-        Os direitos sobre os arquivos que você envia continuam sendo seus. Ao enviar, você nos autoriza a processá-los
-        apenas para gerar as questões e operar o serviço.
-      </p>
+      <H>{t('legal.h.property')}</H>
+      <p>{t('legal.p.property')}</p>
 
-      <H>Alterações e contato</H>
-      <p>
-        Podemos atualizar estas diretrizes de tempos em tempos. Se tiver dúvidas, entre em contato pelo e-mail de suporte
-        do projeto.
-      </p>
+      <H>{t('legal.h.changes')}</H>
+      <p>{t('legal.p.changes')}</p>
     </LegalShell>
   );
 }
 
 export function NotFound() {
+  const { t } = useI18n();
   return (
     <div className="min-h-screen grid place-items-center p-5">
       <div className="max-w-md w-full text-center fade">
@@ -93,19 +76,21 @@ export function NotFound() {
           <Logo />
         </div>
         <Card className="p-8">
-          <p className="text-6xl font-extrabold text-indigo-600">404</p>
-          <h1 className="text-2xl font-extrabold mt-2">Página não encontrada</h1>
-          <p className="text-slate-600 mt-2">
-            O link que você abriu não existe ou foi movido. Confira o endereço ou volte para o início.
-          </p>
+          <p className="text-6xl font-black text-indigo-600">404</p>
+          <h1 className="text-2xl font-black mt-2">{t('404.title')}</h1>
+          <p className="text-slate-600 mt-2 font-semibold">{t('404.sub')}</p>
           <div className="mt-6 flex justify-center gap-2">
-            <Btn to="/dashboard">Ir para o painel</Btn>
+            <Btn to="/dashboard">{t('nav.dashboard')}</Btn>
             <Btn v="s" to="/">
-              Página inicial
+              {t('nav.home')}
             </Btn>
           </div>
-          <p className="mt-4 text-sm text-slate-500">
-            Precisa de ajuda? Veja as <Link className="font-semibold text-indigo-600" to="/diretrizes">diretrizes</Link>.
+          <p className="mt-4 text-sm font-semibold text-slate-500">
+            {t('404.help').replace(t('nav.guidelines'), '')}
+            <Link className="font-extrabold text-indigo-600" to="/diretrizes">
+              {t('nav.guidelines')}
+            </Link>
+            .
           </p>
         </Card>
       </div>

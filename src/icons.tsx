@@ -12,6 +12,8 @@ import fogo1 from '../Icons/Fogo1Dia.png';
 import fogo15 from '../Icons/Fogo15Dias.png';
 import fogo30 from '../Icons/Fogo30Dias.png';
 import chat from '../Icons/balao de chat.png';
+import mascoteClaro from '../Icons/site inicio/claro.png';
+import mascoteEscuro from '../Icons/site inicio/escuro.png';
 
 export const iconSrc = {
   heroi,
@@ -27,6 +29,11 @@ export const iconSrc = {
   fogo30,
   chat,
 } as const;
+
+/** Arte do mascote de acordo com o tema ativo (versões "claro" e "escuro"). */
+export function mascotSrc(theme: 'light' | 'dark'): string {
+  return theme === 'dark' ? mascoteEscuro : mascoteClaro;
+}
 
 export type IconName = keyof typeof iconSrc;
 

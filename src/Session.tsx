@@ -7,6 +7,7 @@ import { Icon } from './icons';
 import { shuffle } from './lib/shuffle';
 import { EmptyState, ErrorState, Spinner } from './components/states';
 import { useAuth } from './auth';
+import { useI18n } from './i18n';
 import { useSettings } from './hooks/useSettings';
 import { getSubject } from './services/subjects';
 import { completeSession, getSession, recordAnswer, sessionAnsweredIds } from './services/sessions';
@@ -29,6 +30,7 @@ export default function Session() {
   const nav = useNavigate();
   const { session: authSession } = useAuth();
   const { sound } = useSettings();
+  const { tr } = useI18n();
   const userId = authSession?.user.id;
 
   const [loading, setLoading] = useState(true);
@@ -62,7 +64,7 @@ export default function Session() {
       try {
         const s = await getSession(id);
         if (!s) {
-          setError('Sessão não encontrada.');
+          setError(tr('Sessão não encontrada.'));
           return;
         }
         if (s.finished_at) {
@@ -89,7 +91,7 @@ export default function Session() {
         setQs(list);
         setTotal(s.total + list.length);
       } catch (e) {
-        if (alive) setError(e instanceof Error ? e.message : 'Erro ao carregar a sessão.');
+        if (alive) setError(e instanceof Error ? e.message : tr('Erro ao carregar a sessão.'));
       } finally {
         if (alive) setLoading(false);
       }
@@ -146,7 +148,7 @@ export default function Session() {
       setXp(res.session_xp);
       setAnswered(res.session_total);
     } catch {
-      setError('Não conseguimos salvar sua resposta. Confira sua internet e tente novamente.');
+      setError(tr('Não conseguimos salvar sua resposta. Confira sua internet e tente novamente.'));
     }
   };
 
@@ -174,7 +176,7 @@ export default function Session() {
       await completeSession(sess.id);
       nav(`/resultado/${sess.id}`, { replace: true });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro ao concluir a sessão.');
+      setError(e instanceof Error ? e.message : tr('Erro ao concluir a sessão.'));
       setClosing(false);
     }
   };
@@ -198,7 +200,7 @@ export default function Session() {
     [q?.id],
   );
 
-  if (loading) return <Spinner label="Carregando a sessão…" />;
+  if (loading) return <Spinner label={tr('Carregando a sessão…')} />;
   if (error) return <div className="max-w-xl mx-auto p-5"><ErrorState message={error} onRetry={() => window.location.reload()} /></div>;
   if (!sess) return null;
 
@@ -208,8 +210,12 @@ export default function Session() {
         <div className="max-w-md w-full">
           <EmptyState
             icon="✅"
-            title="Você já respondeu todas as questões desta sessão."
-            action={<Btn onClick={finish} disabled={closing}>{closing ? 'Concluindo…' : 'Ver resultado'}</Btn>}
+            title={tr('Você já respondeu todas as questões desta sessão.')}
+            action={
+              <Btn onClick={finish} disabled={closing}>
+                {closing ? tr('Concluindo…') : tr('Ver resultado')}
+              </Btn>
+            }
           />
         </div>
       </div>
@@ -220,9 +226,9 @@ export default function Session() {
     <div className="min-h-screen max-w-2xl mx-auto p-5 flex flex-col">
       <div className="flex items-center gap-3">
         <button
-          aria-label="Sair da sessão"
+          aria-label={tr('Sair da sessão')}
           onClick={() => {
-            if (confirm('Sair? Sua sessão fica salva e você pode continuar depois.')) nav('/dashboard');
+            if (confirm(tr('Sair? Sua sessão fica salva e você pode continuar depois.'))) nav('/dashboard');
           }}
           className="p-2 rounded-xl hover:bg-slate-100"
         >
@@ -238,8 +244,9 @@ export default function Session() {
       </div>
 
       <p className="mt-4 text-sm font-semibold text-slate-500">
-        {exam ? '🎓 Modo prova · ' : ''}
-        {subject?.name ?? 'Sessão'} · Questão {Math.min(answered + (ok === null ? 1 : 0), total)} de {total} ·{' '}
+        {exam ? tr('🎓 Modo prova · ') : ''}
+        {subject?.name ?? tr('Sessão')} ·{' '}
+        {tr('Questão {n} de {total}', { n: Math.min(answered + (ok === null ? 1 : 0), total), total })} ·{' '}
         <span className="text-amber-600">{xp} XP</span>
       </p>
 
@@ -282,7 +289,7 @@ export default function Session() {
               ))}
               {ok === null && (
                 <Btn onClick={() => check(JSON.stringify(mt))} disabled={Object.keys(mt).length < (q.pairs?.length ?? 0)}>
-                  Verificar
+                  {tr('Verificar')}
                 </Btn>
               )}
             </>
@@ -291,16 +298,16 @@ export default function Session() {
           {q.type === 'short' && (
             <>
               <input
-                aria-label="Sua resposta"
+                aria-label={tr('Sua resposta')}
                 value={txt}
                 disabled={ok !== null}
                 onChange={(e) => setTxt(e.target.value)}
-                placeholder="Digite sua resposta"
+                placeholder={tr('Digite sua resposta')}
                 className="rounded-2xl border-2 border-slate-200 px-4 py-4"
               />
               {ok === null && (
                 <Btn onClick={() => check(txt)} disabled={!txt.trim()}>
-                  Verificar
+                  {tr('Verificar')}
                 </Btn>
               )}
             </>
@@ -319,20 +326,21 @@ export default function Session() {
 
       {ok !== null && exam && (
         <Card className="pop mt-4 bg-indigo-50 border-indigo-200">
-          <p className="font-extrabold">✓ Resposta registrada.</p>
-          <p className="text-sm text-slate-600 mt-1">No modo prova você vê o resultado só no final.</p>
+          <p className="font-extrabold">{tr('✓ Resposta registrada.')}</p>
+          <p className="text-sm text-slate-600 mt-1">{tr('No modo prova você vê o resultado só no final.')}</p>
           <Btn className="w-full mt-4" onClick={next} disabled={closing}>
-            {idx + 1 < qs.length ? 'Continuar' : closing ? 'Concluindo…' : 'Ver resultado'}
+            {idx + 1 < qs.length ? tr('Continuar') : closing ? tr('Concluindo…') : tr('Ver resultado')}
           </Btn>
         </Card>
       )}
 
       {ok !== null && !exam && (
         <Card className={`pop mt-4 ${ok ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-          <p className="font-extrabold">{ok ? '✓ Muito bem! Você acertou.' : '✕ Ainda não!'}</p>
+          <p className="font-extrabold">{ok ? tr('✓ Muito bem! Você acertou.') : tr('✕ Ainda não!')}</p>
           {!ok && (
             <p className="font-semibold">
-              Resposta correta: {q.type === 'match' ? (q.pairs ?? []).map((p) => p.join(' → ')).join(' · ') : q.answer}
+              {tr('Resposta correta: ')}
+              {q.type === 'match' ? (q.pairs ?? []).map((p) => p.join(' → ')).join(' · ') : q.answer}
             </p>
           )}
           <p className="text-sm text-slate-700 mt-1">{q.explanation}</p>
@@ -344,13 +352,13 @@ export default function Session() {
               className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
             >
               <Sparkles size={16} />
-              {explaining ? 'Pensando…' : 'Explique de novo'}
+              {explaining ? tr('Pensando…') : tr('Explique de novo')}
             </button>
           )}
           {explain && (
             <div className="mt-3 rounded-2xl bg-white/70 border border-indigo-100 p-3">
               <p className="text-xs font-bold text-indigo-600 mb-1 inline-flex items-center gap-1.5">
-                <Icon name="estrela" size={16} /> Explicação da IA
+                <Icon name="estrela" size={16} /> {tr('Explicação da IA')}
               </p>
               <p
                 className="text-sm text-slate-700 whitespace-pre-line"
@@ -361,14 +369,20 @@ export default function Session() {
           {explainErr && <p className="text-sm text-red-500 mt-2">{explainErr}</p>}
 
           <Btn className="w-full mt-4" onClick={next} disabled={closing}>
-            {idx + 1 < qs.length ? (ok ? 'Continuar' : 'Entendi') : closing ? 'Concluindo…' : 'Ver resultado'}
+            {idx + 1 < qs.length
+              ? ok
+                ? tr('Continuar')
+                : tr('Entendi')
+              : closing
+                ? tr('Concluindo…')
+                : tr('Ver resultado')}
           </Btn>
         </Card>
       )}
 
       {secs === 0 && ok === null && (
         <p className="mt-3 text-sm font-semibold text-red-500">
-          O tempo acabou — responda esta questão (a última) e vamos encerrar.
+          {tr('O tempo acabou — responda esta questão (a última) e vamos encerrar.')}
         </p>
       )}
     </div>

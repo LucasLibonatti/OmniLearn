@@ -1,3 +1,5 @@
+import { tr } from '../i18n';
+
 // Datas no fuso de São Paulo (America/Sao_Paulo) e formatação amigável.
 const SP = 'America/Sao_Paulo';
 
@@ -31,7 +33,7 @@ export function lastNDates(n: number): string[] {
 
 const WEEK = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
 export function weekLabel(ymd: string): string {
-  return WEEK[ymdToUTC(ymd).getUTCDay()];
+  return tr(WEEK[ymdToUTC(ymd).getUTCDay()]);
 }
 
 /** Quantos dias seguidos (terminando hoje ou ontem) aparecem na lista de datas. */
@@ -53,10 +55,10 @@ export function shortAgo(iso: string | null | undefined): string {
   if (!iso) return '—';
   const ymd = spDate(iso);
   const today = todaySP();
-  if (ymd === today) return 'Hoje';
-  if (ymd === addDays(today, -1)) return 'Ontem';
+  if (ymd === today) return tr('Hoje');
+  if (ymd === addDays(today, -1)) return tr('Ontem');
   const diff = Math.round((ymdToUTC(today).getTime() - ymdToUTC(ymd).getTime()) / 86400000);
-  if (diff < 7) return `Há ${diff} dias`;
+  if (diff < 7) return tr('Há {n} dias', { n: diff });
   return `${ymd.slice(8, 10)}/${ymd.slice(5, 7)}`;
 }
 
@@ -67,7 +69,7 @@ export function formatDate(iso: string): string {
 
 export function greeting(): string {
   const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: SP, hour: 'numeric', hour12: false }).format(new Date()));
-  if (hour < 12) return 'Bom dia';
-  if (hour < 18) return 'Boa tarde';
-  return 'Boa noite';
+  if (hour < 12) return tr('Bom dia');
+  if (hour < 18) return tr('Boa tarde');
+  return tr('Boa noite');
 }

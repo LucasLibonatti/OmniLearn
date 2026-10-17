@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Bar, Btn, Card } from '../ui';
+import { useI18n } from '../i18n';
 
 export const Spinner = ({ label }: { label?: string }) => (
   <div className="grid place-items-center py-12 gap-3 text-slate-500">
@@ -13,6 +14,7 @@ export const Skeleton = ({ className = '' }: { className?: string }) => (
 );
 
 export function Generating({ label, startedAt }: { label: string; startedAt: number }) {
+  const { tr } = useI18n();
   const [secs, setSecs] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setSecs(Math.floor((Date.now() - startedAt) / 1000)), 500);
@@ -26,27 +28,30 @@ export function Generating({ label, startedAt }: { label: string; startedAt: num
         <div className="w-5 h-5 rounded-full border-2 border-slate-200 border-t-indigo-600 animate-spin shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="font-semibold">{label}</p>
-          <p className="text-sm text-slate-500">Geralmente leva de 30s a 2 minutos. Não feche esta página.</p>
+          <p className="text-sm text-slate-500">
+            {tr('Geralmente leva de 30s a 2 minutos. Não feche esta página.')}
+          </p>
         </div>
         <span className="font-mono font-bold text-slate-500 shrink-0">{mm}</span>
       </div>
       <div className="mt-3">
         <Bar v={pct} />
       </div>
-      <p className="text-xs text-slate-400 mt-1">{pct}% concluído</p>
+      <p className="text-xs text-slate-400 mt-1">{tr('{pct}% concluído', { pct })}</p>
     </Card>
   );
 }
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const { tr } = useI18n();
   return (
     <Card className="text-center">
       <p className="text-2xl">⚠️</p>
-      <p className="font-semibold text-slate-700 mt-2">Algo deu errado</p>
+      <p className="font-semibold text-slate-700 mt-2">{tr('Algo deu errado')}</p>
       <p className="text-sm text-slate-500 mt-1">{message}</p>
       {onRetry && (
         <Btn className="mt-4" onClick={onRetry}>
-          Tentar de novo
+          {tr('Tentar de novo')}
         </Btn>
       )}
     </Card>

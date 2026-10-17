@@ -37,6 +37,36 @@ function truncate(s: string): string {
   return s.length > MAX_CHARS ? s.slice(0, MAX_CHARS) : s;
 }
 
+// ===== Idioma do material =====
+// Resumo e explicação saem no idioma do conteúdo do aluno (PDF), não no da interface.
+type MaterialLang = 'pt' | 'en';
+
+const PT_MARKERS = /\b(de|da|do|das|dos|que|nao|não|uma|um|para|com|por|sao|são|esta|está|muito|tambem|também|como|quando|onde|porque|porquê|entre|apos|após|sem|sobre|mais|menos|isso|esse|essa|ele|eles)\b/gi;
+const EN_MARKERS = /\b(the|and|of|to|in|is|are|was|were|with|for|that|this|from|have|has|had|which|when|where|because|between|after|before|more|most|their|there)\b/gi;
+const DIACRITICS = /[áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ]/g;
+
+/** Heurística simples: stopwords + acentos decidem entre português e inglês. */
+function detectLang(text: string): MaterialLang {
+  const sample = text.slice(0, 6000);
+  const count = (re: RegExp) => (sample.match(re) ?? []).length;
+  const ptScore = count(PT_MARKERS) * 2 + count(DIACRITICS);
+  const enScore = count(EN_MARKERS) * 2;
+  return enScore > ptScore ? 'en' : 'pt';
+}
+
+const INSTRUCTIONS: Record<MaterialLang, { summary: string; explain: string }> = {
+  pt: {
+    summary: 'Você é um professor brasileiro. Crie um resumo de revisão para o aluno.',
+    explain:
+      'Um aluno errou a questão abaixo. Explique de forma simples e curta (2 a 4 frases), em português do Brasil,',
+  },
+  en: {
+    summary: 'You are a teacher. Create a review summary for the student.',
+    explain:
+      'A student got the question below wrong. Explain it simply and briefly (2 to 4 sentences), in English,',
+  },
+};
+
 /** Erro de chamada à Groq, carregando o status HTTP para mapear numa mensagem amigável. */
 class GroqError extends Error {
   status: number;
@@ -151,11 +181,14 @@ Deno.serve(async (req: Request) => {
         .join('\n\n---\n\n');
       if (!content.trim()) return json({ error: 'Esta matéria ainda não tem texto para resumir.' }, 400);
 
+      const lang = detectLang(content);
       const prompt = [
-        'Você é um professor brasileiro. Crie um resumo de revisão para o aluno.',
+        INSTRUCTIONS[lang].summary,
         `Matéria: ${subject.name}${subject.topic ? ` — ${subject.topic}` : ''}.`,
-        'Regras:',
-        '- Escreva em português do Brasil, com tópicos curtos começando por "•".',
+        'Regras / Rules:',
+        lang === 'en'
+          ? '- Write in English, with short bullet points starting with "•".'
+          : '- Escreva em português do Brasil, com tópicos curtos começando por "•".',
         '- NUNCA use asteriscos (exemplo: **palavra**) para dar destaque.',
         '- Destaque definições, datas, fórmulas e palavras-chave usando estritamente a tag HTML <strong>termo</strong>.',
         '- Use no máximo ~250 palavras.',
@@ -180,16 +213,19 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
       if (!q) return json({ error: 'Questão não encontrada.' }, 404);
 
+      const lang = detectLang(`${q.prompt} ${q.answer} ${q.explanation ?? ''}`);
       const prompt = [
-        'Um aluno errou a questão abaixo. Explique de forma simples e curta (2 a 4 frases), em português do Brasil,',
-        `por que a resposta correta é "${q.answer}".`,
+        INSTRUCTIONS[lang].explain,
+        lang === 'en'
+          ? `why the correct answer is "${q.answer}".`
+          : `por que a resposta correta é "${q.answer}".`,
         '',
-        `Pergunta: ${q.prompt}`,
-        q.explanation ? `Explicação original: ${q.explanation}` : '',
+        lang === 'en' ? `Question: ${q.prompt}` : `Pergunta: ${q.prompt}`,
+        q.explanation ? (lang === 'en' ? `Original explanation: ${q.explanation}` : `Explicação original: ${q.explanation}`) : '',
         '',
-        'Regras:',
-        '- NUNCA use asteriscos (**) para negrito. Se precisar destacar termos importantes, use a tag HTML <strong>termo</strong>.',
-        '- Não repita apenas a explicação original: reformule com outras palavras e, se possível, dê um exemplo ou analogia.',
+        lang === 'en'
+          ? 'Rules:\n- NEVER use asterisks (**) for bold. Use the HTML tag <strong>term</strong> instead.\n- Do not just repeat the original explanation: rephrase it and, if possible, give an example or analogy.'
+          : 'Regras:\n- NUNCA use asteriscos (**) para negrito. Se precisar destacar termos importantes, use a tag HTML <strong>termo</strong>.\n- Não repita apenas a explicação original: reformule com outras palavras e, se possível, dê um exemplo ou analogia.',
       ].join('\n');
 
       const text = await callGroq(prompt, GROQ_API_KEY, GROQ_MODEL);

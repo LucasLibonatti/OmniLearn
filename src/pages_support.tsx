@@ -1,41 +1,50 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Send } from 'lucide-react';
-import { Btn, Card, Logo } from './ui';
+import { Btn, Card, Logo, LangSwitch } from './ui';
 import { Icon } from './icons';
 import { Socials } from './components/Socials';
 import { sendSupport } from './services/support';
 import { useAuth } from './auth';
+import { useI18n, type TKey } from './i18n';
 
 function Shell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   const { session } = useAuth();
+  const { t } = useI18n();
   const back = session ? '/dashboard' : '/';
   return (
     <div className="min-h-screen mesh">
-      <header className="max-w-3xl mx-auto flex items-center justify-between p-5">
+      <header className="max-w-3xl mx-auto flex items-center justify-between gap-3 p-5">
         <Logo />
-        <Btn v="s" to={back}>
-          Voltar
-        </Btn>
+        <div className="flex items-center gap-2">
+          <LangSwitch className="hidden sm:inline-flex" />
+          <Btn v="s" to={back}>
+            {t('nav.back')}
+          </Btn>
+        </div>
       </header>
       <main className="max-w-3xl mx-auto px-5 pb-20 fade">
         <div className="flex items-center gap-3">
           <Icon name="chat" size={52} className="float" />
           <div>
-            <h1 className="text-3xl font-extrabold">{title}</h1>
-            <p className="text-slate-500">{subtitle}</p>
+            <h1 className="text-3xl font-black">{title}</h1>
+            <p className="text-slate-500 font-semibold">{subtitle}</p>
           </div>
         </div>
         <div className="mt-6">{children}</div>
+        <div className="mt-6 flex justify-center sm:hidden">
+          <LangSwitch />
+        </div>
       </main>
     </div>
   );
 }
 
 const inputCls =
-  'mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 transition focus:border-indigo-400 focus:outline-none';
+  'mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold transition focus:border-indigo-400 focus:outline-none';
 
 export function Support() {
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
@@ -63,16 +72,16 @@ export function Support() {
   };
 
   return (
-    <Shell title="Suporte" subtitle="Precisa de ajuda ou quer dar uma sugestão? Fale com a gente.">
+    <Shell title={t('support.title')} subtitle={t('support.sub')}>
       {sent ? (
         <Card className="text-center py-10">
           <Icon name="estrela" size={56} className="pop" />
-          <h2 className="font-bold text-lg mt-3">Mensagem enviada!</h2>
-          <p className="text-slate-600 mt-1">Obrigado pelo contato. Vamos responder o mais rápido possível.</p>
+          <h2 className="font-black text-lg mt-3">{t('support.sent')}</h2>
+          <p className="text-slate-600 mt-1 font-semibold">{t('support.sent.sub')}</p>
           <div className="mt-5 flex justify-center gap-2">
-            <Btn onClick={() => setSent(false)}>Enviar outra</Btn>
+            <Btn onClick={() => setSent(false)}>{t('support.again')}</Btn>
             <Btn v="s" to="/dashboard">
-              Ir para o painel
+              {t('nav.dashboard')}
             </Btn>
           </div>
         </Card>
@@ -81,58 +90,53 @@ export function Support() {
           <form onSubmit={submit} className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-4">
               <label className="block">
-                <span className="text-sm font-semibold">Seu nome (opcional)</span>
-                <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Como podemos te chamar?" />
+                <span className="text-sm font-extrabold">{t('support.name')}</span>
+                <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder={t('support.name.ph')} />
               </label>
               <label className="block">
-                <span className="text-sm font-semibold">Seu e-mail (opcional)</span>
+                <span className="text-sm font-extrabold">{t('support.email')}</span>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={inputCls}
-                  placeholder="Para podermos responder"
+                  placeholder={t('support.email.ph')}
                 />
               </label>
             </div>
             <label className="block">
-              <span className="text-sm font-semibold">Assunto</span>
-              <input
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className={inputCls}
-                placeholder="Ex.: dúvida, sugestão, problema técnico…"
-              />
+              <span className="text-sm font-extrabold">{t('support.subject')}</span>
+              <input value={subject} onChange={(e) => setSubject(e.target.value)} className={inputCls} placeholder={t('support.subject.ph')} />
             </label>
             <label className="block">
-              <span className="text-sm font-semibold">Mensagem</span>
+              <span className="text-sm font-extrabold">{t('support.message')}</span>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 required
                 rows={6}
                 className={`${inputCls} resize-y`}
-                placeholder="Escreva sua mensagem…"
+                placeholder={t('support.message.ph')}
               />
             </label>
-            {err && <p className="text-sm font-medium text-red-600">{err}</p>}
+            {err && <p className="text-sm font-bold text-red-600">{err}</p>}
             <Btn type="submit" disabled={busy || message.trim().length < 5}>
               <Send size={16} />
-              {busy ? 'Enviando…' : 'Enviar mensagem'}
+              {busy ? t('support.sending') : t('support.send')}
             </Btn>
           </form>
         </Card>
       )}
 
       <Card className="mt-6 text-center">
-        <p className="font-bold">Também estamos nas redes</p>
+        <p className="font-black">{t('support.socials')}</p>
         <Socials className="mt-4" />
       </Card>
 
-      <p className="text-center text-sm text-slate-500 mt-6">
-        Veja também as{' '}
-        <Link to="/diretrizes" className="font-semibold text-indigo-600">
-          diretrizes
+      <p className="text-center text-sm font-semibold text-slate-500 mt-6">
+        {t('support.seeGuidelines').replace(t('support.guidelinesLink'), '')}
+        <Link to="/diretrizes" className="font-extrabold text-indigo-600">
+          {t('support.guidelinesLink')}
         </Link>
         .
       </p>
@@ -141,26 +145,27 @@ export function Support() {
 }
 
 export function SocialsPage() {
-  const redes = [
-    { nome: 'Instagram', desc: 'Bastidores, dicas de estudo e novidades.' },
-    { nome: 'TikTok', desc: 'Vídeos curtos e truques para estudar melhor.' },
-    { nome: 'YouTube', desc: 'Tutoriais e como aproveitar o OmniLearn.' },
-    { nome: 'X', desc: 'Avisos rápidos e atualizações.' },
+  const { t } = useI18n();
+  const redes: { nome: string; desc: TKey }[] = [
+    { nome: 'Instagram', desc: 'socials.instagram' },
+    { nome: 'TikTok', desc: 'socials.tiktok' },
+    { nome: 'YouTube', desc: 'socials.youtube' },
+    { nome: 'X', desc: 'socials.x' },
   ];
   return (
-    <Shell title="Redes sociais" subtitle="Acompanhe o OmniLearn e fique por dentro das novidades.">
+    <Shell title={t('socials.title')} subtitle={t('socials.sub')}>
       <div className="grid sm:grid-cols-2 gap-4">
         {redes.map((r) => (
           <Card key={r.nome} className="flex items-start gap-3">
             <Icon name="estrela" size={40} />
             <div>
-              <p className="font-bold">{r.nome}</p>
-              <p className="text-sm text-slate-600">{r.desc}</p>
+              <p className="font-black">{r.nome}</p>
+              <p className="text-sm font-semibold text-slate-600">{t(r.desc)}</p>
             </div>
           </Card>
         ))}
       </div>
-      <p className="text-center text-sm text-slate-500 mt-6">Toque em uma rede para seguir — em breve os links estarão ativos.</p>
+      <p className="text-center text-sm font-semibold text-slate-500 mt-6">{t('socials.hint')}</p>
       <Socials className="mt-4" />
     </Shell>
   );

@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
 import { iconSrc } from './icons';
 import { useAuth } from './auth';
+import { useI18n } from './i18n';
+import { useSettings } from './hooks/useSettings';
 
 export const Card = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
   <div
@@ -29,7 +31,11 @@ export const Btn = ({
   disabled?: boolean;
   type?: 'button' | 'submit';
 }) => {
-  const c = `inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-semibold transition active:scale-95 disabled:opacity-40 ${v === 'p' ? 'bg-gradient-to-b from-indigo-500 to-indigo-600 text-white hover:from-indigo-500 hover:to-indigo-700 shadow-lg shadow-indigo-300/50' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm'} ${className}`;
+  const c = `btn3d inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3 font-extrabold transition disabled:opacity-40 ${
+    v === 'p'
+      ? 'bg-indigo-600 text-white border-b-[#312e81] hover:bg-indigo-500 shadow-[0_4px_14px_-4px_rgba(79,70,229,.5)]'
+      : 'bg-white text-slate-600 border-b-slate-300 hover:bg-slate-50'
+  } ${className}`;
   return to ? (
     <Link to={to} className={c}>
       {children}
@@ -40,6 +46,7 @@ export const Btn = ({
     </button>
   );
 };
+
 
 export const Bar = ({ v, color = 'bg-indigo-600' }: { v: number; color?: string }) => (
   <div
@@ -57,7 +64,7 @@ export function Select({
   value,
   onChange,
   options,
-  placeholder = 'Escolha…',
+  placeholder,
   ariaLabel,
   disabled,
   className = '',
@@ -70,6 +77,8 @@ export function Select({
   disabled?: boolean;
   className?: string;
 }) {
+  const { tr } = useI18n();
+  const ph = placeholder ?? tr('Escolha…');
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -105,7 +114,7 @@ export function Select({
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between gap-2 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-left font-medium text-slate-700 transition hover:border-indigo-400 focus:outline-none disabled:opacity-50"
       >
-        <span className={`truncate ${value ? '' : 'text-slate-400'}`}>{value || placeholder}</span>
+        <span className={`truncate ${value ? '' : 'text-slate-400'}`}>{value || ph}</span>
         <ChevronDown size={18} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -120,7 +129,7 @@ export function Select({
               onClick={() => choose('')}
               className={`w-full text-left rounded-lg px-3 py-2.5 text-sm text-slate-400 transition hover:bg-slate-100 ${value === '' ? 'bg-slate-100' : ''}`}
             >
-              {placeholder}
+              {ph}
             </button>
           </li>
           {options.map((o) => (
@@ -190,6 +199,32 @@ export const Logo = () => {
       />
       <span className="text-xl font-extrabold tracking-tight">OmniLearn</span>
     </Link>
+  );
+};
+
+/** Seletor de idioma segmentado (PT / EN). */
+export const LangSwitch = ({ className = '' }: { className?: string }) => {
+  const { lang, setLang, t } = useI18n();
+  const base =
+    'px-3 py-1.5 rounded-full text-sm font-extrabold transition focus-visible:shadow-[0_0_0_3px_#fff,0_0_0_6px_#4f46e5]';
+  return (
+    <div
+      role="group"
+      aria-label={t('lang.label')}
+      className={`inline-flex items-center gap-0.5 rounded-full border border-slate-200 bg-white p-1 shadow-sm ${className}`}
+    >
+      {(['pt', 'en'] as const).map((l) => (
+        <button
+          key={l}
+          type="button"
+          aria-pressed={lang === l}
+          onClick={() => setLang(l)}
+          className={`${base} ${lang === l ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
+        >
+          {l.toUpperCase()}
+        </button>
+      ))}
+    </div>
   );
 };
 

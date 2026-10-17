@@ -33,6 +33,7 @@ import { EmptyState, ErrorState, Generating, Skeleton, Spinner } from './compone
 import { useAuth } from './auth';
 import { useAsync } from './hooks/useAsync';
 import { useSettings } from './hooks/useSettings';
+import { useI18n, type Lang } from './i18n';
 import { useProfile, useSubjects } from './hooks/useApp';
 import {
   archiveSubject,
@@ -65,13 +66,13 @@ import { formatDate, greeting, lastNDates, shortAgo, todaySP, weekLabel } from '
 import { xpInLevel, XP_PER_LEVEL } from './engine/xp';
 import type { Material, SubjectWithStats } from './types';
 
-const nav = [
-  { to: '/dashboard', label: 'Início', icon: Home },
-  { to: '/materias', label: 'Minhas matérias', icon: BookOpen },
-  { to: '/flashcards', label: 'Flashcards', icon: Layers },
-  { to: '/estatisticas', label: 'Estatísticas', icon: BarChart3 },
-  { to: '/conquistas', label: 'Conquistas', icon: Trophy },
-  { to: '/perfil', label: 'Perfil', icon: User },
+const navItems = (tr: (s: string, vars?: any) => string) => [
+  { to: '/dashboard', label: tr('Início'), icon: Home },
+  { to: '/materias', label: tr('Minhas matérias'), icon: BookOpen },
+  { to: '/flashcards', label: tr('Flashcards'), icon: Layers },
+  { to: '/estatisticas', label: tr('Estatísticas'), icon: BarChart3 },
+  { to: '/conquistas', label: tr('Conquistas'), icon: Trophy },
+  { to: '/perfil', label: tr('Perfil'), icon: User },
 ];
 
 function Switch({ on, onChange, label }: { on: boolean; onChange: () => void; label: string }) {
@@ -92,12 +93,14 @@ function Switch({ on, onChange, label }: { on: boolean; onChange: () => void; la
 }
 
 export function Layout() {
+  const { tr } = useI18n();
   const { data: profile } = useProfile();
   const { session, signOut } = useAuth();
   const { theme, sound, reminder, toggleTheme, toggleSound } = useSettings();
   const loc = useLocation();
   const today = useAsync(() => (session?.user.id ? statsApi.answeredToday(session.user.id) : Promise.resolve(0)), [session?.user.id]);
-  const name = profile?.name ?? 'Estudante';
+  const name = profile?.name ?? tr('Estudante');
+  const nav = navItems(tr);
   useEffect(() => {
     if (!reminder) return;
     const check = () => {
@@ -109,8 +112,8 @@ export function Layout() {
       const goal = profile?.daily_goal ?? 18;
       const done = today.data ?? 0;
       if (done >= goal) return;
-      new Notification('Hora de estudar! 📚', {
-        body: done > 0 ? `Você fez ${done} de ${goal} questões hoje. Bora manter a sequência?` : 'Você ainda não estudou hoje. Bora manter a sequência?',
+      new Notification(tr('Hora de estudar! 📚'), {
+        body: done > 0 ? tr('Você fez {n} de {goal} questões hoje. Bora manter a sequência?', { n: done, goal }) : tr('Você ainda não estudou hoje. Bora manter a sequência?'),
       });
       localStorage.setItem(key, day);
     };
@@ -122,7 +125,7 @@ export function Layout() {
     <div className="min-h-screen md:pl-64">
       <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 flex-col bg-white border-r border-slate-100 p-5">
         <Logo />
-        <nav className="mt-8 flex flex-col gap-1" aria-label="Principal">
+        <nav className="mt-8 flex flex-col gap-1" aria-label={tr('Principal')}>
           {nav.map((n) => (
             <NavLink
               key={n.to}
@@ -142,38 +145,38 @@ export function Layout() {
             className="flex items-center gap-3 rounded-2xl px-4 py-3 font-medium text-slate-600 hover:bg-slate-50"
           >
             <LifeBuoy size={20} />
-            Suporte
+            {tr('Suporte')}
           </Link>
           <Link
             to="/redes"
             className="flex items-center gap-3 rounded-2xl px-4 py-3 font-medium text-slate-600 hover:bg-slate-50"
           >
             <Share2 size={20} />
-            Redes sociais
+            {tr('Redes sociais')}
           </Link>
           <Link
             to="/diretrizes"
             className="flex items-center gap-3 rounded-2xl px-4 py-3 font-medium text-slate-600 hover:bg-slate-50"
           >
             <ScrollText size={20} />
-            Diretrizes
+            {tr('Diretrizes')}
           </Link>
           <div className="flex items-center gap-3">
             <Avatar name={name} src={profile?.avatar_url} size={40} />
             <div className="text-sm min-w-0">
               <p className="font-semibold truncate">{name}</p>
-              <p className="text-slate-500">Nível {profile?.level ?? 1}</p>
+              <p className="text-slate-500">{tr('Nível {n}', { n: profile?.level ?? 1 })}</p>
             </div>
             <div className="ml-auto flex items-center">
               <button
-                aria-label={theme === 'dark' ? 'Usar tema claro' : 'Usar tema escuro'}
+                aria-label={theme === 'dark' ? tr('Usar tema claro') : tr('Usar tema escuro')}
                 onClick={toggleTheme}
                 className="text-slate-400 hover:text-slate-700 p-2 rounded-xl hover:bg-slate-100"
               >
                 {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
               </button>
               <button
-                aria-label="Sair"
+                aria-label={tr('Sair')}
                 onClick={() => signOut()}
                 className="text-slate-400 hover:text-slate-700 p-2 rounded-xl hover:bg-slate-100"
               >
@@ -186,7 +189,7 @@ export function Layout() {
       <main key={loc.pathname} className="max-w-5xl mx-auto p-5 md:p-10 pb-28 fade">
         <Outlet />
       </main>
-      <nav aria-label="Mobile" className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 flex justify-around py-2 z-10">
+      <nav aria-label={tr('Mobile')} className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 flex justify-around py-2 z-10">
         {nav.map((n) => (
           <NavLink
             key={n.to}
@@ -196,7 +199,7 @@ export function Layout() {
             }
           >
             <n.icon size={22} />
-            {n.label.replace('Minhas ', '')}
+            {n.label.replace(tr('Minhas '), '')}
           </NavLink>
         ))}
       </nav>
@@ -234,6 +237,7 @@ export function SubjectCard({
   manage?: boolean;
   onChanged?: () => void;
 }) {
+  const { tr } = useI18n();
   const nav2 = useNavigate();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(s.name);
@@ -254,7 +258,7 @@ export function SubjectCard({
     }
   };
   const archive = async () => {
-    if (!confirm(`Arquivar "${s.name}"? Você pode reativar depois.`)) return;
+    if (!confirm(tr('Arquivar "{name}"? Você pode reativar depois.', { name: s.name }))) return;
     setBusy(true);
     try {
       await archiveSubject(s.id);
@@ -264,7 +268,7 @@ export function SubjectCard({
     }
   };
   const remove = async () => {
-    if (!confirm(`Excluir "${s.name}"? Isto apaga as questões, materiais e arquivos enviados.`)) return;
+    if (!confirm(tr('Excluir "{name}"? Isto apaga as questões, materiais e arquivos enviados.', { name: s.name }))) return;
     setBusy(true);
     try {
       await deleteSubject(s.id);
@@ -294,7 +298,7 @@ export function SubjectCard({
       </div>
       <h3 className="font-bold text-lg mt-3">{s.topic || s.name}</h3>
       <p className="text-sm text-slate-500">
-        {s.questions} questões · Última sessão: {shortAgo(s.last_session)}
+        {tr('{n} questões', { n: s.questions })} · {tr('Última sessão')}: {shortAgo(s.last_session)}
       </p>
       <div className="mt-4 flex items-center gap-3">
         <div className="flex-1">
@@ -304,27 +308,27 @@ export function SubjectCard({
       </div>
       <div className="mt-4 flex gap-2">
         <Btn className="flex-1" onClick={() => nav2(`/sessao/configurar/${s.id}`)} disabled={!s.questions}>
-          {s.questions ? 'Estudar' : 'Sem questões'}
+          {s.questions ? tr('Estudar') : tr('Sem questões')}
         </Btn>
         <Btn v="s" to={`/materias/${s.id}`}>
-          Abrir
+          {tr('Abrir')}
         </Btn>
       </div>
       {manage && (
         <div className="mt-2 flex justify-end items-center gap-1 text-slate-400">
           {editing ? (
             <button onClick={save} disabled={busy} className="px-2 py-1 text-xs font-semibold text-indigo-600">
-              Salvar
+              {tr('Salvar')}
             </button>
           ) : (
-            <button onClick={() => setEditing(true)} className="p-2 hover:text-indigo-600" aria-label="Renomear">
+            <button onClick={() => setEditing(true)} className="p-2 hover:text-indigo-600" aria-label={tr('Renomear')}>
               <Pencil size={16} />
             </button>
           )}
-          <button onClick={archive} disabled={busy} className="p-2 hover:text-slate-700" aria-label="Arquivar">
+          <button onClick={archive} disabled={busy} className="p-2 hover:text-slate-700" aria-label={tr('Arquivar')}>
             <Archive size={16} />
           </button>
-          <button onClick={remove} disabled={busy} className="p-2 hover:text-red-600" aria-label="Excluir">
+          <button onClick={remove} disabled={busy} className="p-2 hover:text-red-600" aria-label={tr('Excluir')}>
             <Trash2 size={16} />
           </button>
         </div>
@@ -334,6 +338,7 @@ export function SubjectCard({
 }
 
 export function Dashboard() {
+  const { tr } = useI18n();
   const { session } = useAuth();
   const userId = session?.user.id;
   const { data: profile } = useProfile();
@@ -343,7 +348,7 @@ export function Dashboard() {
   const pending = useAsync(() => (userId ? pendingSession(userId) : Promise.resolve(null)), [userId]);
   const weak = useAsync(() => (userId ? statsApi.weakSpots(userId) : Promise.resolve([])), [userId]);
 
-  const name = (profile?.name ?? 'Estudante').split(' ')[0];
+  const name = (profile?.name ?? tr('Estudante')).split(' ')[0];
   const done = today.data ?? 0;
   const goal = profile?.daily_goal ?? 18;
   const streak = profile?.streak ?? 0;
@@ -356,38 +361,38 @@ export function Dashboard() {
         <h1 className="text-3xl font-extrabold">
           {greeting()}, {name} 👋
         </h1>
-        <p className="text-slate-600">Pronto para estudar hoje?</p>
+        <p className="text-slate-600">{tr('Pronto para estudar hoje?')}</p>
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
         <Card className="bg-gradient-to-br from-orange-50 to-amber-50">
           <Icon name={flameFor(streak)} size={56} className="float" />
-          <p className="text-4xl font-extrabold mt-2">{streak} {streak === 1 ? 'dia' : 'dias'}</p>
+          <p className="text-4xl font-extrabold mt-2">{tr('{n} dias', { n: streak })}</p>
           <p className="text-slate-600">
-            {streak === 0 ? 'Comece sua sequência hoje!' : 'Você está em uma sequência incrível!'}
+            {streak === 0 ? tr('Comece sua sequência hoje!') : tr('Você está em uma sequência incrível!')}
           </p>
           <div className="mt-4">
             <Week dates={week.data ?? []} />
           </div>
         </Card>
         <Card className="md:col-span-2 flex flex-col">
-          <p className="font-bold">Sessão de hoje</p>
+          <p className="font-bold">{tr('Sessão de hoje')}</p>
           <p className="text-sm text-slate-500 mt-1">
-            {done} / {goal} questões respondidas hoje
+            {tr('{done} / {goal} questões respondidas hoje', { done, goal })}
           </p>
           <div className="mt-3">
             <Bar v={Math.min(100, (done / goal) * 100)} />
           </div>
           <div className="mt-5 flex items-center justify-between gap-3 mt-auto">
-            <p className="text-sm text-slate-500">{breaking ? 'Não deixe sua sequência quebrar!' : 'Continue assim!'}</p>
+            <p className="text-sm text-slate-500">{breaking ? tr('Não deixe sua sequência quebrar!') : tr('Continue assim!')}</p>
             {pending.data ? (
-              <Btn to={`/sessao/${pending.data.id}`}>Continuar sessão</Btn>
+              <Btn to={`/sessao/${pending.data.id}`}>{tr('Continuar sessão')}</Btn>
             ) : subjectsData.length ? (
               <Btn to={`/sessao/configurar/${subjectsData[0].id}`} disabled={!subjectsData[0].questions}>
-                Começar sessão de hoje
+                {tr('Começar sessão de hoje')}
               </Btn>
             ) : (
-              <Btn to="/materias/nova">Criar minha primeira matéria</Btn>
+              <Btn to="/materias/nova">{tr('Criar minha primeira matéria')}</Btn>
             )}
           </div>
         </Card>
@@ -404,9 +409,9 @@ export function Dashboard() {
       ) : subjectsData.length === 0 ? (
         <EmptyState
           icon={<Icon name="livro" size={56} />}
-          title="Bem-vindo ao OmniLearn!"
-          desc="Crie sua primeira matéria, envie seus slides e deixe a IA montar seus exercícios."
-          action={<Btn to="/materias/nova">Criar minha primeira matéria</Btn>}
+          title={tr('Bem-vindo ao OmniLearn!')}
+          desc={tr('Crie sua primeira matéria, envie seus slides e deixe a IA montar seus exercícios.')}
+          action={<Btn to="/materias/nova">{tr('Criar minha primeira matéria')}</Btn>}
         />
       ) : (
         <div className="grid md:grid-cols-3 gap-4">
@@ -416,39 +421,40 @@ export function Dashboard() {
         </div>
       )}
 
-      <Card>
-        <h2 className="font-bold text-lg">Seus pontos de atenção</h2>
-        {weak.loading ? (
-          <Skeleton className="h-16 mt-3" />
-        ) : (weak.data ?? []).length === 0 ? (
-          <p className="text-slate-600 text-sm mt-2">Nenhum ponto fraco por aqui. Continue assim! 💪</p>
-        ) : (
-          <>
-            <p className="text-slate-600 text-sm">Com base nas suas últimas respostas, recomendamos revisar:</p>
-            <ul className="my-4 space-y-2">
-              {(weak.data ?? []).slice(0, 3).map((w) => (
-                <li key={w.topic} className="font-medium">
-                  {w.dot} {w.topic} <span className="text-slate-400 text-sm">({w.wrong} de {w.of} erradas)</span>
-                </li>
-              ))}
-            </ul>
-            <Btn to="/revisao">Revisar agora</Btn>
-          </>
-        )}
-      </Card>
+        <Card>
+          <h2 className="font-bold text-lg">{tr('Seus pontos de atenção')}</h2>
+          {weak.loading ? (
+            <Skeleton className="h-16 mt-3" />
+          ) : (weak.data ?? []).length === 0 ? (
+            <p className="text-slate-600 text-sm mt-2">{tr('Nenhum ponto fraco por aqui. Continue assim! 💪')}</p>
+          ) : (
+            <>
+              <p className="text-slate-600 text-sm">{tr('Com base nas suas últimas respostas, recomendamos revisar:')}</p>
+              <ul className="my-4 space-y-2">
+                {(weak.data ?? []).slice(0, 3).map((w) => (
+                  <li key={w.topic} className="font-medium">
+                    {w.dot} {w.topic} <span className="text-slate-400 text-sm">{tr('({n} de {of} erradas)', { n: w.wrong, of: w.of })}</span>
+                  </li>
+                ))}
+              </ul>
+              <Btn to="/revisao">{tr('Revisar agora')}</Btn>
+            </>
+          )}
+        </Card>
     </div>
   );
 }
 
 export function Subjects() {
+  const { tr } = useI18n();
   const subjects = useSubjects();
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-extrabold">Minhas matérias</h1>
+        <h1 className="text-3xl font-extrabold">{tr('Minhas matérias')}</h1>
         <Btn to="/materias/nova">
           <Plus size={18} />
-          Nova matéria
+          {tr('Nova matéria')}
         </Btn>
       </div>
       {subjects.loading ? (
@@ -462,9 +468,9 @@ export function Subjects() {
       ) : (subjects.data ?? []).length === 0 ? (
         <EmptyState
           icon={<Icon name="livro" size={56} />}
-          title="Nenhuma matéria ainda"
-          desc="Crie uma matéria e envie seus materiais para começar."
-          action={<Btn to="/materias/nova">Nova matéria</Btn>}
+          title={tr('Nenhuma matéria ainda')}
+          desc={tr('Crie uma matéria e envie seus materiais para começar.')}
+          action={<Btn to="/materias/nova">{tr('Nova matéria')}</Btn>}
         />
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
@@ -478,6 +484,7 @@ export function Subjects() {
 }
 
 export function SubjectPage() {
+  const { tr } = useI18n();
   const { id } = useParams();
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -507,10 +514,10 @@ export function SubjectPage() {
     setGenStart(Date.now());
     try {
       const res = await generateQuestions(id);
-      setGenMsg(`Pronto! ${res.inserted} questões geradas.`);
+      setGenMsg(tr('Pronto! {n} questões geradas.', { n: res.inserted }));
       data.reload();
     } catch (e) {
-      setGenMsg(`Erro: ${(e as Error).message}`);
+      setGenMsg(tr('Erro: {msg}', { msg: (e as Error).message }));
     } finally {
       setGenerating(false);
       setGenStart(null);
@@ -530,21 +537,21 @@ export function SubjectPage() {
     }
   };
 
-  if (data.loading) return <Spinner label="Carregando matéria…" />;
+  if (data.loading) return <Spinner label={tr('Carregando matéria…')} />;
   if (data.error) return <ErrorState message={data.error} onRetry={data.reload} />;
-  if (!data.data?.subject) return <EmptyState title="Matéria não encontrada" action={<Btn to="/materias">Voltar</Btn>} />;
+  if (!data.data?.subject) return <EmptyState title={tr('Matéria não encontrada')} action={<Btn to="/materias">{tr('Voltar')}</Btn>} />;
 
   const { subject, questions, materials, stats, topics } = data.data;
   const status = (m: Material) =>
     m.status === 'ready'
-      ? { text: '✓ Pronto', cls: 'text-emerald-600' }
+      ? { text: tr('✓ Pronto'), cls: 'text-emerald-600' }
       : m.status === 'error'
-        ? { text: 'Erro', cls: 'text-red-500' }
+        ? { text: tr('Erro'), cls: 'text-red-500' }
         : m.status === 'generating'
-          ? { text: 'Gerando…', cls: 'text-amber-600' }
+          ? { text: tr('Gerando…'), cls: 'text-amber-600' }
           : m.status === 'extracted'
-            ? { text: 'Texto lido', cls: 'text-slate-500' }
-            : { text: 'Enviado', cls: 'text-slate-500' };
+            ? { text: tr('Texto lido'), cls: 'text-slate-500' }
+            : { text: tr('Enviado'), cls: 'text-slate-500' };
 
   return (
     <div className="space-y-6">
@@ -554,13 +561,13 @@ export function SubjectPage() {
         </span>
         <h1 className="text-3xl font-extrabold mt-3">{subject.topic || subject.name}</h1>
         <p className="text-slate-600">
-          {questions} questões · {stats?.answered ?? 0} respondidas · {stats?.streak ?? 0} dias de atividade
+          {tr('{n} questões', { n: questions })} · {tr('{n} respondidas', { n: stats?.answered ?? 0 })} · {tr('{n} dias de atividade', { n: stats?.streak ?? 0 })}
         </p>
       </div>
 
       <Card>
         <div className="flex justify-between font-bold">
-          <span>Domínio</span>
+          <span>{tr('Domínio')}</span>
           <span>{stats?.accuracy ?? 0}%</span>
         </div>
         <div className="mt-2">
@@ -568,52 +575,56 @@ export function SubjectPage() {
         </div>
         <div className="mt-5 flex flex-wrap gap-2">
           <Btn to={`/sessao/configurar/${subject.id}`} disabled={questions === 0}>
-            Estudar agora
+            {tr('Estudar agora')}
           </Btn>
           <Btn v="s" to={`/materias/nova?subject=${subject.id}`} disabled={materials.length >= 3}>
-            Adicionar material
+            {tr('Adicionar material')}
           </Btn>
           <Btn v="s" onClick={generate} disabled={generating || materials.length === 0}>
             <Sparkles size={16} />
-            {generating ? 'Gerando…' : 'Gerar mais questões'}
+            {generating ? tr('Gerando…') : tr('Gerar mais questões')}
           </Btn>
           <Btn v="s" onClick={doSummary} disabled={sumBusy || materials.length === 0}>
             <Sparkles size={16} />
-            {sumBusy ? 'Resumindo…' : 'Resumo com IA'}
+            {sumBusy ? tr('Resumindo…') : tr('Resumo com IA')}
           </Btn>
           <Btn v="s" to={`/materias/${subject.id}/flashcards`} disabled={questions === 0}>
             <Layers size={16} />
-            Flashcards
+            {tr('Flashcards')}
           </Btn>
           <Btn v="s" to={`/materias/${subject.id}/imprimir`} disabled={questions === 0}>
             <Printer size={16} />
-            Imprimir
+            {tr('Imprimir')}
           </Btn>
           <Btn
             v="s"
             onClick={() =>
               shareText(
-                `Estou estudando ${subject.topic || subject.name} no OmniLearn! ${questions} questões e ${stats?.accuracy ?? 0}% de acerto. 📚`,
+                tr('Estou estudando {topic} no OmniLearn! {n} questões e {pct}% de acerto. 📚', {
+                  topic: subject.topic || subject.name,
+                  n: questions,
+                  pct: stats?.accuracy ?? 0,
+                }),
               )
             }
           >
             <Share2 size={16} />
-            Compartilhar
+            {tr('Compartilhar')}
           </Btn>
         </div>
         {genMsg && !generating && <p className="text-sm mt-3 font-medium text-slate-600">{genMsg}</p>}
       </Card>
 
       {generating && genStart !== null && (
-        <Generating label="Gerando questões com a IA…" startedAt={genStart} />
+        <Generating label={tr('Gerando questões com a IA…')} startedAt={genStart} />
       )}
 
       {(summary || sumBusy || sumErr) && (
         <Card className="bg-indigo-50 border-indigo-100">
           <h2 className="font-bold mb-2 inline-flex items-center gap-2">
-            <Icon name="estrela" size={22} /> Resumo da IA
+            <Icon name="estrela" size={22} /> {tr('Resumo da IA')}
           </h2>
-          {sumBusy && <p className="text-sm text-slate-600">Lendo seus materiais e resumindo…</p>}
+          {sumBusy && <p className="text-sm text-slate-600">{tr('Lendo seus materiais e resumindo…')}</p>}
           {sumErr && <p className="text-sm text-red-600">{sumErr}</p>}
           {summary && (
             <p
@@ -625,9 +636,9 @@ export function SubjectPage() {
       )}
 
       <Card>
-        <h2 className="font-bold mb-3">Materiais</h2>
+        <h2 className="font-bold mb-3">{tr('Materiais')}</h2>
         {materials.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhum material enviado ainda.</p>
+          <p className="text-sm text-slate-500">{tr('Nenhum material enviado ainda.')}</p>
         ) : (
           <div className="space-y-3">
             {materials.map((m) => {
@@ -637,7 +648,7 @@ export function SubjectPage() {
                   <FileText className="text-indigo-600 shrink-0" />
                   <div className="min-w-0">
                     <p className="font-medium truncate">{m.file_name}</p>
-                    <p className="text-sm text-slate-500">{m.pages || '—'} páginas</p>
+                    <p className="text-sm text-slate-500">{tr('{n} páginas', { n: m.pages || '—' })}</p>
                     {m.status === 'error' && m.error_message && <p className="text-xs text-red-500">{m.error_message}</p>}
                   </div>
                   <span className={`ml-auto text-sm font-semibold shrink-0 ${st.cls}`}>{st.text}</span>
@@ -650,7 +661,7 @@ export function SubjectPage() {
 
       {topics.length > 0 && (
         <Card>
-          <h2 className="font-bold mb-3">Desempenho por assunto</h2>
+          <h2 className="font-bold mb-3">{tr('Desempenho por assunto')}</h2>
           <div className="space-y-3">
             {topics.map((t) => (
               <div key={t.topic}>
@@ -675,6 +686,7 @@ interface Entry {
 }
 
 export function NewSubject() {
+  const { tr } = useI18n();
   const [params] = useSearchParams();
   const existingId = params.get('subject');
   const nav2 = useNavigate();
@@ -702,11 +714,11 @@ export function NewSubject() {
     const errs: string[] = [];
     for (const f of Array.from(list)) {
       if (!/\.(pdf|pptx)$/i.test(f.name)) {
-        errs.push(`${f.name}: só aceitamos PDF e PPTX`);
+        errs.push(tr('{name}: só aceitamos PDF e PPTX', { name: f.name }));
         continue;
       }
       if (f.size > 20 * 1024 * 1024) {
-        errs.push(`${f.name}: maior que 20 MB`);
+        errs.push(tr('{name}: maior que 20 MB', { name: f.name }));
         continue;
       }
       valid.push(f);
@@ -726,22 +738,22 @@ export function NewSubject() {
     let sid = subjectId;
     try {
       if (!sid) {
-        if (!name.trim()) throw new Error('Dê um nome para a matéria.');
-        setStatus('Criando matéria…');
+        if (!name.trim()) throw new Error(tr('Dê um nome para a matéria.'));
+        setStatus(tr('Criando matéria…'));
         const s = await createSubject(userId, name.trim(), topic.trim() || null);
         sid = s.id;
         setCreated(s.id);
       }
-      if (!sid) throw new Error('Não foi possível criar a matéria.');
+      if (!sid) throw new Error(tr('Não foi possível criar a matéria.'));
       const already = await countMaterials(sid);
       const incoming = mode === 'text' ? 1 : files.length;
-      if (already + incoming > 3) throw new Error('Cada matéria aceita no máximo 3 materiais.');
-      if (incoming === 0 && already === 0) throw new Error('Envie um arquivo ou cole um texto.');
+      if (already + incoming > 3) throw new Error(tr('Cada matéria aceita no máximo 3 materiais.'));
+      if (incoming === 0 && already === 0) throw new Error(tr('Envie um arquivo ou cole um texto.'));
 
       if (mode === 'text') {
-        if (pasted.trim().length < 200) throw new Error('Cole um texto maior (pelo menos 200 caracteres).');
-        setStatus('Salvando o texto…');
-        await createTextMaterial(userId, sid, pasted.trim(), name.trim() || 'Texto colado');
+        if (pasted.trim().length < 200) throw new Error(tr('Cole um texto maior (pelo menos 200 caracteres).'));
+        setStatus(tr('Salvando o texto…'));
+        await createTextMaterial(userId, sid, pasted.trim(), name.trim() || tr('Texto colado'));
       } else {
         setEntries(files.map((f) => ({ name: f.name, status: 'pending' })));
         const { extractText } = await import('./lib/extract');
@@ -753,8 +765,8 @@ export function NewSubject() {
           try {
             const ex = await extractText(file);
             if (ex.empty) {
-              await setMaterialError(mat.id, 'Não conseguimos ler texto suficiente neste arquivo (pode ser escaneado ou só com imagens).');
-              updateEntry(i, { status: 'error', msg: 'Sem texto legível' });
+              await setMaterialError(mat.id, tr('Não conseguimos ler texto suficiente neste arquivo (pode ser escaneado ou só com imagens).'));
+              updateEntry(i, { status: 'error', msg: tr('Sem texto legível') });
             } else {
               await setMaterialExtracted(mat.id, ex.pages, ex.text);
               updateEntry(i, { status: 'ready' });
@@ -766,50 +778,50 @@ export function NewSubject() {
         }
       }
 
-      setStatus('Gerando questões com a IA…');
+      setStatus(tr('Gerando questões com a IA…'));
       setGenStart(Date.now());
       const res = await generateQuestions(sid);
-      setStatus(`Tudo pronto! ${res.inserted} questões geradas.`);
+      setStatus(tr('Tudo pronto! {n} questões geradas.', { n: res.inserted }));
       nav2(`/sessao/configurar/${sid}`);
     } catch (e) {
       setGenStart(null);
       setBusy(false);
-      setStatus(`Erro: ${(e as Error).message}`);
+      setStatus(tr('Erro: {msg}', { msg: (e as Error).message }));
     }
   };
 
-  if (existingId && existing.loading) return <Spinner label="Carregando matéria…" />;
+  if (existingId && existing.loading) return <Spinner label={tr('Carregando matéria…')} />;
 
   return (
     <div className="max-w-2xl space-y-6">
       <h1 className="text-3xl font-extrabold">
-        {existingId ? `Adicionar material a ${existing.data?.name ?? ''}` : 'Crie uma nova matéria'}
+        {existingId ? tr('Adicionar material a {name}', { name: existing.data?.name ?? '' }) : tr('Crie uma nova matéria')}
       </h1>
 
       {!existingId && (
         <>
           <label className="block">
-            <span className="font-semibold">Nome da matéria</span>
+            <span className="font-semibold">{tr('Nome da matéria')}</span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="História — Revolução Francesa"
+              placeholder={tr('História — Revolução Francesa')}
               className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 bg-white"
             />
           </label>
           <label className="block">
-            <span className="font-semibold">Assunto (opcional)</span>
+            <span className="font-semibold">{tr('Assunto (opcional)')}</span>
             <input
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              placeholder="Ex.: Revolução Francesa"
+              placeholder={tr('Ex.: Revolução Francesa')}
               className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 bg-white"
             />
           </label>
         </>
       )}
 
-      <h2 className="font-bold text-lg">Adicione seu material</h2>
+      <h2 className="font-bold text-lg">{tr('Adicione seu material')}</h2>
       <div className="flex gap-2">
         {(['file', 'text'] as const).map((m) => (
           <button
@@ -817,7 +829,7 @@ export function NewSubject() {
             onClick={() => setMode(m)}
             className={`flex-1 rounded-2xl px-4 py-3 font-semibold border-2 ${mode === m ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'}`}
           >
-            {m === 'file' ? '📎 Enviar arquivo' : '✍️ Colar texto'}
+            {m === 'file' ? tr('📎 Enviar arquivo') : tr('✍️ Colar texto')}
           </button>
         ))}
       </div>
@@ -832,9 +844,9 @@ export function NewSubject() {
           className="block cursor-pointer rounded-3xl border-2 border-dashed border-indigo-200 bg-indigo-50/50 p-10 text-center hover:bg-indigo-50 focus-within:outline-2"
         >
           <Upload className="mx-auto text-indigo-600" size={32} />
-          <p className="font-bold mt-3">Arraste seus arquivos aqui</p>
-          <p className="text-sm text-slate-500">ou clique para selecionar</p>
-          <p className="text-xs text-slate-400 mt-2">Até 3 arquivos · PDF ou PPTX · até 20 MB cada</p>
+          <p className="font-bold mt-3">{tr('Arraste seus arquivos aqui')}</p>
+          <p className="text-sm text-slate-500">{tr('ou clique para selecionar')}</p>
+          <p className="text-xs text-slate-400 mt-2">{tr('Até 3 arquivos · PDF ou PPTX · até 20 MB cada')}</p>
           <input type="file" multiple accept=".pdf,.pptx" className="sr-only" onChange={(e) => add(e.target.files)} />
         </label>
       ) : (
@@ -842,14 +854,13 @@ export function NewSubject() {
           value={pasted}
           onChange={(e) => setPasted(e.target.value)}
           rows={8}
-          placeholder="Cole aqui o texto do seu material (resumo, anotação, capítulo…)."
+          placeholder={tr('Cole aqui o texto do seu material (resumo, anotação, capítulo…).')}
           className="w-full rounded-3xl border-2 border-slate-200 px-4 py-4 bg-white"
         />
       )}
 
       <p className="text-xs text-slate-500">
-        O conteúdo enviado é processado por um serviço de IA para gerar as questões e não deve conter dados pessoais de
-        terceiros.
+        {tr('O conteúdo enviado é processado por um serviço de IA para gerar as questões e não deve conter dados pessoais de terceiros.')}
       </p>
 
       {entries.map((e, i) => (
@@ -862,28 +873,28 @@ export function NewSubject() {
           <span
             className={`ml-auto text-sm font-semibold shrink-0 ${e.status === 'ready' ? 'text-emerald-600' : e.status === 'error' ? 'text-red-500' : 'text-slate-500'}`}
           >
-            {e.status === 'pending' && 'Na fila'}
-            {e.status === 'uploading' && 'Enviando…'}
-            {e.status === 'reading' && 'Lendo…'}
-            {e.status === 'ready' && '✓ Pronto'}
-            {e.status === 'error' && '✕ Erro'}
+            {e.status === 'pending' && tr('Na fila')}
+            {e.status === 'uploading' && tr('Enviando…')}
+            {e.status === 'reading' && tr('Lendo…')}
+            {e.status === 'ready' && tr('✓ Pronto')}
+            {e.status === 'error' && tr('✕ Erro')}
           </span>
         </Card>
       ))}
 
       {genStart !== null ? (
-        <Generating label="Gerando questões com a IA…" startedAt={genStart} />
+        <Generating label={tr('Gerando questões com a IA…')} startedAt={genStart} />
       ) : (
         status && <p className="text-sm font-medium text-slate-600">{status}</p>
       )}
 
       <Btn disabled={(mode === 'text' ? pasted.trim().length < 200 : files.length === 0) || busy} onClick={run}>
         <Sparkles size={18} />
-        {busy ? 'Processando…' : existingId ? 'Adicionar e gerar questões' : 'Criar minha sessão'}
+        {busy ? tr('Processando…') : existingId ? tr('Adicionar e gerar questões') : tr('Criar minha sessão')}
       </Btn>
-      {!busy && status.startsWith('Erro') && subjectId && (
+      {!busy && status.startsWith(tr('Erro')) && subjectId && (
         <Btn v="s" to={`/materias/${subjectId}`}>
-          Ir para a matéria e tentar de novo
+          {tr('Ir para a matéria e tentar de novo')}
         </Btn>
       )}
     </div>
@@ -891,6 +902,7 @@ export function NewSubject() {
 }
 
 export function Configure() {
+  const { tr } = useI18n();
   const { subjectId } = useParams();
   const nav2 = useNavigate();
   const [busy, setBusy] = useState(false);
@@ -912,26 +924,26 @@ export function Configure() {
       const id = await startSession({ subjectId, mode: 'smart', planned });
       nav2(`/sessao/${id}${exam ? '?exam=1' : ''}`);
     } catch (e) {
-      setMsg(`Erro: ${(e as Error).message}`);
+      setMsg(tr('Erro: {msg}', { msg: (e as Error).message }));
       setBusy(false);
     }
   };
 
-  if (data.loading) return <Spinner label="Preparando…" />;
+  if (data.loading) return <Spinner label={tr('Preparando…')} />;
   if (data.error) return <ErrorState message={data.error} onRetry={data.reload} />;
-  if (!data.data?.subject) return <EmptyState title="Matéria não encontrada" action={<Btn to="/materias">Voltar</Btn>} />;
+  if (!data.data?.subject) return <EmptyState title={tr('Matéria não encontrada')} action={<Btn to="/materias">{tr('Voltar')}</Btn>} />;
 
   const { subject, questions } = data.data;
 
   return (
     <div className="max-w-xl space-y-6">
-      <h1 className="text-3xl font-extrabold">Prepare sua sessão</h1>
+      <h1 className="text-3xl font-extrabold">{tr('Prepare sua sessão')}</h1>
       <Card className="divide-y divide-slate-100">
         {[
-          ['Matéria', subject.name],
-          ['Conteúdo', subject.topic || subject.name],
-          ['Tempo', '15 minutos'],
-          ['Quantidade estimada', questions ? `${planned} questões` : 'Nenhuma questão ainda'],
+          [tr('Matéria'), subject.name],
+          [tr('Conteúdo'), subject.topic || subject.name],
+          [tr('Tempo'), tr('15 minutos')],
+          [tr('Quantidade estimada'), questions ? tr('{n} questões', { n: planned }) : tr('Nenhuma questão ainda')],
         ].map(([a, b]) => (
           <div key={a} className="flex justify-between py-3">
             <span className="text-slate-500">{a}</span>
@@ -940,8 +952,8 @@ export function Configure() {
         ))}
       </Card>
       <Card className="bg-indigo-50 border-indigo-100">
-        <p className="font-bold">Aprendizado inteligente</p>
-        <p className="text-sm text-slate-600">As perguntas serão adaptadas ao seu desempenho.</p>
+        <p className="font-bold">{tr('Aprendizado inteligente')}</p>
+        <p className="text-sm text-slate-600">{tr('As perguntas serão adaptadas ao seu desempenho.')}</p>
       </Card>
       <Card>
         <label className="flex items-start gap-3 cursor-pointer">
@@ -952,25 +964,26 @@ export function Configure() {
             className="mt-1 w-5 h-5 accent-indigo-600"
           />
           <div>
-            <p className="font-bold">🎓 Modo prova</p>
-            <p className="text-sm text-slate-600">No modo prova você responde sem ver se acertou, como uma prova de verdade. O resultado aparece só no final.</p>
+            <p className="font-bold">{tr('🎓 Modo prova')}</p>
+            <p className="text-sm text-slate-600">{tr('No modo prova você responde sem ver se acertou, como uma prova de verdade. O resultado aparece só no final.')}</p>
           </div>
         </label>
       </Card>
       {questions === 0 && (
         <p className="text-sm text-amber-700">
-          Esta matéria ainda não tem questões. Adicione material e gere as questões primeiro.
+          {tr('Esta matéria ainda não tem questões. Adicione material e gere as questões primeiro.')}
         </p>
       )}
       {msg && <p className="text-sm font-medium text-red-600">{msg}</p>}
       <Btn disabled={planned === 0 || busy} onClick={start}>
-        {busy ? 'Começando…' : 'Começar sessão'}
+        {busy ? tr('Começando…') : tr('Começar sessão')}
       </Btn>
     </div>
   );
 }
 
 export function Result() {
+  const { tr } = useI18n();
   const { sessionId } = useParams();
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -986,9 +999,9 @@ export function Result() {
     return { sess, topics, profile, week, achievements };
   }, [sessionId, userId]);
 
-  if (data.loading) return <Spinner label="Carregando resultado…" />;
+  if (data.loading) return <Spinner label={tr('Carregando resultado…')} />;
   if (data.error) return <ErrorState message={data.error} onRetry={data.reload} />;
-  if (!data.data?.sess) return <EmptyState title="Resultado não encontrado" action={<Btn to="/dashboard">Voltar</Btn>} />;
+  if (!data.data?.sess) return <EmptyState title={tr('Resultado não encontrado')} action={<Btn to="/dashboard">{tr('Voltar')}</Btn>} />;
 
   const { sess, topics, profile, week, achievements } = data.data;
   const pct = sess.total ? Math.round((sess.correct / sess.total) * 100) : 0;
@@ -998,8 +1011,8 @@ export function Result() {
   return (
     <div className="max-w-xl mx-auto text-center space-y-6">
       <Icon name="trofeu" size={72} className="pop mx-auto" />
-      <h1 className="text-3xl font-extrabold">Sessão concluída!</h1>
-      <p className="text-slate-600">Você completou sua sessão de hoje.</p>
+      <h1 className="text-3xl font-extrabold">{tr('Sessão concluída!')}</h1>
+      <p className="text-slate-600">{tr('Você completou sua sessão de hoje.')}</p>
       <div className="grid grid-cols-3 gap-3">
         <Card>
           <p className="text-2xl font-extrabold">
@@ -1008,7 +1021,7 @@ export function Result() {
         </Card>
         <Card>
           <p className="text-2xl font-extrabold">{pct}%</p>
-          <p className="text-xs text-slate-500">de acerto</p>
+          <p className="text-xs text-slate-500">{tr('de acerto')}</p>
         </Card>
         <Card>
           <p className="text-2xl font-extrabold text-amber-500">+{sess.xp_gained} XP</p>
@@ -1018,24 +1031,24 @@ export function Result() {
         <p className="font-bold text-orange-600 mb-3 flex items-center gap-1.5">
           <Icon name={flameFor(profile?.streak ?? 0)} size={22} />
           {profile && profile.streak > 0
-            ? `Sua sequência continua! ${profile.streak} ${profile.streak === 1 ? 'dia' : 'dias'}`
-            : 'Comece sua sequência!'}
+            ? tr('Sua sequência continua! {n} dias', { n: profile.streak })
+            : tr('Comece sua sequência!')}
         </p>
         <Week dates={week} />
       </Card>
       <div className="grid sm:grid-cols-2 gap-3 text-left">
         <Card>
-          <h2 className="font-bold">Você mandou bem em:</h2>
+          <h2 className="font-bold">{tr('Você mandou bem em:')}</h2>
           {good.length ? good.slice(0, 4).map((t) => <p key={t.topic} className="mt-2">🟢 {t.topic}</p>) : <p className="text-sm text-slate-500 mt-2">—</p>}
         </Card>
         <Card>
-          <h2 className="font-bold">Vale revisar:</h2>
-          {bad.length ? bad.slice(0, 4).map((t) => <p key={t.topic} className="mt-2">🔴 {t.topic}</p>) : <p className="text-sm text-slate-500 mt-2">Nada para revisar. 👏</p>}
+          <h2 className="font-bold">{tr('Vale revisar:')}</h2>
+          {bad.length ? bad.slice(0, 4).map((t) => <p key={t.topic} className="mt-2">🔴 {t.topic}</p>) : <p className="text-sm text-slate-500 mt-2">{tr('Nada para revisar. 👏')}</p>}
         </Card>
       </div>
       {achievements.length > 0 && (
         <Card className="text-left">
-          <h2 className="font-bold mb-2">Novas conquistas</h2>
+          <h2 className="font-bold mb-2">{tr('Novas conquistas')}</h2>
           <div className="flex flex-wrap gap-3">
             {achievements.map((a) => (
               <span key={a.id} className="inline-flex items-center gap-2 rounded-2xl bg-amber-50 px-3 py-2 font-semibold pop">
@@ -1046,9 +1059,9 @@ export function Result() {
         </Card>
       )}
       <div className="flex gap-3 justify-center">
-        <Btn to="/revisao">Revisar meus erros</Btn>
+        <Btn to="/revisao">{tr('Revisar meus erros')}</Btn>
         <Btn v="s" to="/dashboard">
-          Voltar ao início
+          {tr('Voltar ao início')}
         </Btn>
       </div>
     </div>
@@ -1056,6 +1069,7 @@ export function Result() {
 }
 
 export function Review() {
+  const { tr } = useI18n();
   const { session } = useAuth();
   const userId = session?.user.id;
   const nav2 = useNavigate();
@@ -1065,7 +1079,7 @@ export function Review() {
 
   const practice = async (topic: string, subjectId: string) => {
     if (!subjectId) {
-      setMsg('Não foi possível abrir a prática deste assunto.');
+      setMsg(tr('Não foi possível abrir a prática deste assunto.'));
       return;
     }
     setBusy(topic);
@@ -1074,35 +1088,35 @@ export function Review() {
       const id = await startSession({ subjectId, mode: 'topic', topicFilter: topic, planned: 18 });
       nav2(`/sessao/${id}`);
     } catch (e) {
-      setMsg(`Erro: ${(e as Error).message}`);
+      setMsg(tr('Erro: {msg}', { msg: (e as Error).message }));
       setBusy(null);
     }
   };
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-extrabold">Vamos reforçar seus pontos fracos.</h1>
+      <h1 className="text-3xl font-extrabold">{tr('Vamos reforçar seus pontos fracos.')}</h1>
       {msg && <p className="text-sm font-medium text-red-600">{msg}</p>}
       {weak.loading ? (
         <Skeleton className="h-28" />
       ) : weak.error ? (
         <ErrorState message={weak.error} onRetry={weak.reload} />
       ) : (weak.data ?? []).length === 0 ? (
-        <EmptyState icon="🎉" title="Nenhum erro recente!" desc="Continue praticando para manter o ritmo." action={<Btn to="/dashboard">Voltar</Btn>} />
+        <EmptyState icon="🎉" title={tr('Nenhum erro recente!')} desc={tr('Continue praticando para manter o ritmo.')} action={<Btn to="/dashboard">{tr('Voltar')}</Btn>} />
       ) : (
         (weak.data ?? []).map((w) => (
           <Card key={w.topic} className="flex items-center gap-4 flex-wrap">
             <div className="flex-1">
               <h2 className="font-bold text-lg">{w.topic}</h2>
               <p className="text-slate-600 text-sm">
-                Você errou {w.wrong} de {w.of} questões.
+                {tr('Você errou {n} de {of} questões.', { n: w.wrong, of: w.of })}
               </p>
               <p className="text-sm font-semibold mt-1">
-                {w.dot} Nível: {w.level}
+                {w.dot} {tr('Nível')}: {w.level}
               </p>
             </div>
             <Btn onClick={() => practice(w.topic, w.subject_id)} disabled={busy === w.topic}>
-              {busy === w.topic ? 'Abrindo…' : 'Praticar'}
+              {busy === w.topic ? tr('Abrindo…') : tr('Praticar')}
             </Btn>
           </Card>
         ))
@@ -1112,6 +1126,7 @@ export function Review() {
 }
 
 export function Stats() {
+  const { tr } = useI18n();
   const { session } = useAuth();
   const userId = session?.user.id;
   const data = useAsync(async () => {
@@ -1129,7 +1144,7 @@ export function Stats() {
     return { profile, answered, acc, week, masteryVal, subjectList, perfs, weak };
   }, [userId]);
 
-  if (data.loading) return <Spinner label="Carregando estatísticas…" />;
+  if (data.loading) return <Spinner label={tr('Carregando estatísticas…')} />;
   if (data.error) return <ErrorState message={data.error} onRetry={data.reload} />;
   if (!data.data) return null;
   const { profile, answered, acc, week, masteryVal, subjectList, perfs, weak } = data.data;
@@ -1137,13 +1152,13 @@ export function Stats() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-extrabold">Sua evolução</h1>
+      <h1 className="text-3xl font-extrabold">{tr('Sua evolução')}</h1>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          ['fogo15', `${profile?.streak ?? 0} dias de sequência`],
-          ['trofeu', `${profile?.xp ?? 0} XP`],
-          ['livro', `${answered} questões respondidas`],
-          ['alvo', `${acc}% de aproveitamento`],
+          ['fogo15', tr('{n} dias de sequência', { n: profile?.streak ?? 0 })],
+          ['trofeu', tr('{n} XP', { n: profile?.xp ?? 0 })],
+          ['livro', tr('{n} questões respondidas', { n: answered })],
+          ['alvo', tr('{pct}% de aproveitamento', { pct: acc })],
         ].map(([e, t]) => (
           <Card key={t}>
             <Icon name={e as IconName} size={32} />
@@ -1154,7 +1169,7 @@ export function Stats() {
 
       <div className="grid md:grid-cols-2 gap-4">
         <Card>
-          <h2 className="font-bold mb-4">Evolução semanal</h2>
+          <h2 className="font-bold mb-4">{tr('Evolução semanal')}</h2>
           <div className="flex items-end gap-2 h-40">
             {week.map((d) => (
               <div key={d.date} className="flex-1 flex flex-col items-center justify-end h-full">
@@ -1166,24 +1181,23 @@ export function Stats() {
           </div>
         </Card>
         <Card className="flex flex-col items-center text-center gap-3">
-          <h2 className="font-bold">Domínio estimado do conteúdo</h2>
+          <h2 className="font-bold">{tr('Domínio estimado do conteúdo')}</h2>
           {masteryVal === null ? (
-            <div className="grid place-items-center h-[150px] text-slate-500 font-semibold">Ainda coletando dados</div>
+            <div className="grid place-items-center h-[150px] text-slate-500 font-semibold">{tr('Ainda coletando dados')}</div>
           ) : (
             <Ring v={masteryVal} />
           )}
           <p className="text-xs text-slate-500">
-            Este índice é baseado no seu desempenho recente, acertos, erros, dificuldade das questões e consistência dos
-            estudos. Ele não representa uma probabilidade real de aprovação.
+            {tr('Este índice é baseado no seu desempenho recente, acertos, erros, dificuldade das questões e consistência dos estudos. Ele não representa uma probabilidade real de aprovação.')}
           </p>
         </Card>
       </div>
 
       <Card>
-        <h2 className="font-bold mb-3">Desempenho por matéria</h2>
-        {subjectList.length === 0 ? (
-          <p className="text-sm text-slate-500">Sem dados ainda.</p>
-        ) : (
+          <h2 className="font-bold mb-3">{tr('Desempenho por matéria')}</h2>
+          {subjectList.length === 0 ? (
+            <p className="text-sm text-slate-500">{tr('Sem dados ainda.')}</p>
+          ) : (
           <div className="space-y-3">
             {subjectList.map((s) => (
               <div key={s.id}>
@@ -1200,7 +1214,7 @@ export function Stats() {
 
       <div className="grid sm:grid-cols-2 gap-4">
         <Card>
-          <h2 className="font-bold">Continue praticando</h2>
+          <h2 className="font-bold">{tr('Continue praticando')}</h2>
           {weak.length ? (
             weak.slice(0, 4).map((w) => (
               <p key={w.topic} className="mt-2">
@@ -1217,13 +1231,14 @@ export function Stats() {
 }
 
 export function Achievements() {
+  const { tr } = useI18n();
   const { session } = useAuth();
   const userId = session?.user.id;
   const data = useAsync(() => (userId ? listAchievements(userId) : Promise.resolve([])), [userId]);
 
   return (
     <div>
-      <h1 className="text-3xl font-extrabold mb-6">Conquistas</h1>
+      <h1 className="text-3xl font-extrabold mb-6">{tr('Conquistas')}</h1>
       {data.loading ? (
         <div className="grid sm:grid-cols-2 gap-4">
           {[0, 1, 2, 3].map((i) => (
@@ -1242,13 +1257,13 @@ export function Achievements() {
                 <p className="text-sm text-slate-600">{a.descr}</p>
                 <p className="text-xs font-semibold mt-1 flex items-center gap-1">
                   {a.unlocked ? (
-                    `✓ Desbloqueada${a.unlocked_at ? ` em ${formatDate(a.unlocked_at)}` : ''}`
-                  ) : (
-                    <>
-                      <Lock size={12} />
-                      Bloqueada
-                    </>
-                  )}
+                      a.unlocked_at ? tr('✓ Desbloqueada em {date}', { date: formatDate(a.unlocked_at) }) : tr('✓ Desbloqueada')
+                    ) : (
+                      <>
+                        <Lock size={12} />
+                        {tr('Bloqueada')}
+                      </>
+                    )}
                 </p>
               </div>
             </Card>
@@ -1259,11 +1274,18 @@ export function Achievements() {
   );
 }
 
+const LANG_OPTIONS: { value: Lang; label: string }[] = [
+  { value: 'pt', label: 'Português (PT)' },
+  { value: 'en', label: 'English (EN)' },
+];
+
 export function Profile() {
+  const { tr } = useI18n();
   const { session, signOut } = useAuth();
   const userId = session?.user.id;
   const profile = useProfile();
   const { theme, sound, reminder, toggleTheme, toggleSound, toggleReminder } = useSettings();
+  const { lang, setLang } = useI18n();
   const fileRef = useRef<HTMLInputElement>(null);
   const [goalInput, setGoalInput] = useState('');
   const [savingGoal, setSavingGoal] = useState(false);
@@ -1284,7 +1306,7 @@ export function Profile() {
   }, [userId]);
 
   const p = profile.data;
-  const displayName = p?.name ?? 'Estudante';
+  const displayName = p?.name ?? tr('Estudante');
   const xp = p?.xp ?? 0;
 
   const startEdit = () => {
@@ -1308,11 +1330,11 @@ export function Profile() {
   const pickPhoto = async (file: File | undefined) => {
     if (!file || !userId) return;
     if (!/^image\//.test(file.type)) {
-      setMsg('Escolha um arquivo de imagem (JPG, PNG…).');
+      setMsg(tr('Escolha um arquivo de imagem (JPG, PNG…).'));
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      setMsg('A foto deve ter no máximo 5 MB.');
+      setMsg(tr('A foto deve ter no máximo 5 MB.'));
       return;
     }
     setUploading(true);
@@ -1330,7 +1352,7 @@ export function Profile() {
     if (!userId) return;
     const n = parseInt(goalInput, 10);
     if (!n || n < 5 || n > 100) {
-      setMsg('Escolha uma meta entre 5 e 100 questões.');
+      setMsg(tr('Escolha uma meta entre 5 e 100 questões.'));
       return;
     }
     setSavingGoal(true);
@@ -1346,8 +1368,8 @@ export function Profile() {
     }
   };
   const removeAccount = async () => {
-    if (!confirm('Excluir sua conta e TODOS os seus dados? Esta ação não pode ser desfeita.')) return;
-    if (!confirm('Tem certeza absoluta? Materiais, questões e histórico serão apagados.')) return;
+    if (!confirm(tr('Excluir sua conta e TODOS os seus dados? Esta ação não pode ser desfeita.'))) return;
+    if (!confirm(tr('Tem certeza absoluta? Materiais, questões e histórico serão apagados.'))) return;
     setBusy(true);
     setMsg(null);
     try {
@@ -1361,7 +1383,7 @@ export function Profile() {
 
   return (
     <div className="max-w-xl space-y-4">
-      <h1 className="text-3xl font-extrabold">Meu perfil</h1>
+      <h1 className="text-3xl font-extrabold">{tr('Meu perfil')}</h1>
       <Card className="text-center">
         <div className="relative w-24 h-24 mx-auto grid place-items-center">
           <Avatar name={displayName} src={profile.data?.avatar_url} size={96} />
@@ -1381,7 +1403,7 @@ export function Profile() {
             onChange={(e) => pickPhoto(e.target.files?.[0])}
           />
         </div>
-        {uploading && <p className="text-xs text-slate-500 mt-2">Enviando foto…</p>}
+        {uploading && <p className="text-xs text-slate-500 mt-2">{tr('Enviando foto…')}</p>}
         {editing ? (
           <div className="mt-3 flex items-center justify-center gap-2">
             <input
@@ -1391,13 +1413,13 @@ export function Profile() {
               autoFocus
             />
             <Btn onClick={saveName} disabled={busy}>
-              Salvar
+              {tr('Salvar')}
             </Btn>
           </div>
         ) : (
           <h2 className="text-xl font-bold mt-3">{displayName}</h2>
         )}
-        <p className="text-slate-600">Nível {p?.level ?? 1}</p>
+        <p className="text-slate-600">{tr('Nível {n}', { n: p?.level ?? 1 })}</p>
         <div className="mt-3">
           <Bar v={(xpInLevel(xp) / XP_PER_LEVEL) * 100} color="bg-amber-400" />
         </div>
@@ -1405,15 +1427,15 @@ export function Profile() {
           XP: {xpInLevel(xp)} / {XP_PER_LEVEL}
         </p>
         <p className="mt-2 font-semibold inline-flex items-center gap-1.5">
-          <Icon name={flameFor(p?.streak ?? 0)} size={20} /> Sequência: {p?.streak ?? 0} dias
+          <Icon name={flameFor(p?.streak ?? 0)} size={20} /> {tr('Sequência')}: {tr('{n} dias', { n: p?.streak ?? 0 })}
         </p>
       </Card>
 
       <div className="grid grid-cols-3 gap-3 text-center">
         {[
-          [extra.data?.answered ?? 0, 'questões'],
-          [`${extra.data?.acc ?? 0}%`, 'acerto'],
-          [extra.data?.subjects ?? 0, 'matérias'],
+          [extra.data?.answered ?? 0, tr('questões')],
+          [`${extra.data?.acc ?? 0}%`, tr('acerto')],
+          [extra.data?.subjects ?? 0, tr('matérias')],
         ].map(([v, l]) => (
           <Card key={l}>
             <p className="text-xl font-extrabold">{v}</p>
@@ -1423,26 +1445,51 @@ export function Profile() {
       </div>
 
       <Card>
-        <h2 className="font-bold mb-1">Preferências</h2>
+        <h2 className="font-bold mb-1">{tr('Preferências')}</h2>
         <div className="flex items-center justify-between gap-3 py-3">
           <div>
-            <p className="font-medium">Tema escuro</p>
-            <p className="text-sm text-slate-500">Melhor para estudar à noite.</p>
+            <p className="font-medium">{tr('Idioma da interface (Language)')}</p>
+            <p className="text-sm text-slate-500">{tr('Escolha entre Português e Inglês.')}</p>
           </div>
-          <Switch on={theme === 'dark'} onChange={toggleTheme} label="Tema escuro" />
+          <div
+            role="group"
+            aria-label={tr('Idioma da interface')}
+            className="inline-flex shrink-0 items-center gap-0.5 rounded-2xl border border-slate-200 bg-white p-1"
+          >
+            {LANG_OPTIONS.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                aria-pressed={lang === o.value}
+                onClick={() => setLang(o.value)}
+                className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                  lang === o.value ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex items-center justify-between gap-3 py-3 border-t border-slate-100">
           <div>
-            <p className="font-medium">Sons ao responder</p>
-            <p className="text-sm text-slate-500">Um "plim" no acerto e um "tadam" no erro.</p>
+            <p className="font-medium">{tr('Tema escuro')}</p>
+            <p className="text-sm text-slate-500">{tr('Melhor para estudar à noite.')}</p>
           </div>
-          <Switch on={sound} onChange={toggleSound} label="Sons ao responder" />
+          <Switch on={theme === 'dark'} onChange={toggleTheme} label={tr('Tema escuro')} />
+        </div>
+        <div className="flex items-center justify-between gap-3 py-3 border-t border-slate-100">
+          <div>
+            <p className="font-medium">{tr('Sons ao responder')}</p>
+            <p className="text-sm text-slate-500">{tr('Um "plim" no acerto e um "tadam" no erro.')}</p>
+          </div>
+          <Switch on={sound} onChange={toggleSound} label={tr('Sons ao responder')} />
         </div>
         <div className="py-3 border-t border-slate-100">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="font-medium">Meta diária de questões</p>
-              <p className="text-sm text-slate-500">Quantas questões você quer resolver por dia?</p>
+              <p className="font-medium">{tr('Meta diária de questões')}</p>
+              <p className="text-sm text-slate-500">{tr('Quantas questões você quer resolver por dia?')}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <input
@@ -1454,60 +1501,65 @@ export function Profile() {
                 className="w-20 rounded-xl border border-slate-200 px-3 py-2 text-center"
               />
               <Btn v="s" onClick={saveGoal} disabled={savingGoal}>
-                {savingGoal ? '…' : 'Salvar'}
+                {savingGoal ? tr('…') : tr('Salvar')}
               </Btn>
             </div>
           </div>
         </div>
         <div className="flex items-center justify-between gap-3 py-3 border-t border-slate-100">
           <div>
-            <p className="font-medium">Lembrete diário</p>
-            <p className="text-sm text-slate-500">Aviso às 19h se você ainda não bateu a meta.</p>
-          </div>
-          <Switch on={reminder} onChange={() => void toggleReminder()} label="Lembrete diário" />
+              <p className="font-medium">{tr('Lembrete diário')}</p>
+              <p className="text-sm text-slate-500">{tr('Aviso às 19h se você ainda não bateu a meta.')}</p>
+            </div>
+            <Switch on={reminder} onChange={() => void toggleReminder()} label={tr('Lembrete diário')} />
         </div>
         <div className="flex items-center justify-between gap-3 py-3 border-t border-slate-100">
           <div>
-            <p className="font-medium">Suporte</p>
-            <p className="text-sm text-slate-500">Precisa de ajuda? Fale com a gente.</p>
-          </div>
-          <Link to="/suporte" className="font-semibold text-indigo-600">
-            Abrir
-          </Link>
+              <p className="font-medium">{tr('Suporte')}</p>
+              <p className="text-sm text-slate-500">{tr('Precisa de ajuda? Fale com a gente.')}</p>
+            </div>
+            <Link to="/suporte" className="text-indigo-600 font-semibold text-sm">
+              {tr('Abrir')}
+            </Link>
         </div>
         <div className="flex items-center justify-between gap-3 py-3 border-t border-slate-100">
           <div>
-            <p className="font-medium">Redes sociais</p>
-            <p className="text-sm text-slate-500">Acompanhe as novidades do OmniLearn.</p>
+            <p className="font-medium">{tr('Redes sociais')}</p>
+            <p className="text-sm text-slate-500">{tr('Acompanhe as novidades do OmniLearn.')}</p>
           </div>
           <Link to="/redes" className="font-semibold text-indigo-600">
-            Ver
+            {tr('Ver')}
           </Link>
         </div>
         <div className="flex items-center justify-between gap-3 py-3 border-t border-slate-100">
           <div>
-            <p className="font-medium">Diretrizes e termos</p>
-            <p className="text-sm text-slate-500">Um espaço para tirar dúvidas e enviar sugestões.</p>
+            <p className="font-medium">{tr('Diretrizes e termos')}</p>
+            <p className="text-sm text-slate-500">{tr('Um espaço para tirar dúvidas e enviar sugestões.')}</p>
           </div>
-          <Link to="/diretrizes" className="font-semibold text-indigo-600">Ver</Link>
+          <Link to="/diretrizes" className="font-semibold text-indigo-600">{tr('Ver')}</Link>
         </div>
       </Card>
 
       {msg && <p className="text-sm font-medium text-red-600">{msg}</p>}
       <div className="flex flex-wrap gap-2">
-        {!editing && <Btn v="s" onClick={startEdit}>Editar perfil</Btn>}
+        {!editing && <Btn v="s" onClick={startEdit}>{tr('Editar perfil')}</Btn>}
         <Btn
           v="s"
           onClick={() =>
             shareText(
-              `Estou usando o OmniLearn! 🔥 Sequência de ${p?.streak ?? 0} dias, nível ${p?.level ?? 1} e ${extra.data?.answered ?? 0} questões respondidas. 📚`,
+              tr('Estou usando o OmniLearn! ✨ Sequência de {n} dias, nível {level} e {q} questões respondidas. 🚀', {
+                n: p?.streak ?? 0,
+                level: p?.level ?? 1,
+                q: extra.data?.answered ?? 0,
+              }),
             )
           }
         >
-          <Share2 size={16} /> Compartilhar progresso
+          <Share2 size={16} />
+          {tr('Compartilhar')}
         </Btn>
         <Btn v="s" onClick={removeAccount} disabled={busy}>
-          <Trash2 size={16} /> Excluir minha conta e meus dados
+          <Trash2 size={16} /> {tr('Excluir minha conta e meus dados')}
         </Btn>
       </div>
     </div>
@@ -1515,6 +1567,7 @@ export function Profile() {
 }
 
 export function Flashcards() {
+  const { tr } = useI18n();
   const { id } = useParams();
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -1543,17 +1596,17 @@ export function Flashcards() {
     setIdx((i) => i + 1);
   };
 
-  if (data.loading) return <Spinner label="Carregando flashcards…" />;
+  if (data.loading) return <Spinner label={tr('Carregando flashcards…')} />;
   if (data.error) return <ErrorState message={data.error} onRetry={data.reload} />;
 
   if (!card) {
     return (
       <div className="max-w-xl">
         <EmptyState
-          icon="🃏"
-          title={cards.length === 0 ? 'Nenhum flashcard por aqui ainda' : 'Você revisou todos os flashcards de hoje!'}
-          desc={cards.length === 0 ? 'Resolva sessões para os flashcards aparecerem.' : 'Volte amanhã para revisar de novo. 🎉'}
-          action={<Btn to="/dashboard">Voltar ao início</Btn>}
+          icon="🎯"
+          title={cards.length === 0 ? tr('Nenhum flashcard por aqui ainda') : tr('Você revisou todos os flashcards de hoje!')}
+          desc={cards.length === 0 ? tr('Resolva sessões para os flashcards aparecerem.') : tr('Volte amanhã para revisar de novo. 🗓️')}
+          action={<Btn to="/dashboard">{tr('Voltar ao início')}</Btn>}
         />
       </div>
     );
@@ -1564,7 +1617,7 @@ export function Flashcards() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-extrabold">🃏 Flashcards</h1>
         <span className="text-sm font-semibold text-slate-500">
-          {idx + 1} de {cards.length}
+          {tr('{n} de {total}', { n: idx + 1, total: cards.length })}
         </span>
       </div>
       <Bar v={((idx + 1) / cards.length) * 100} />
@@ -1581,7 +1634,7 @@ export function Flashcards() {
         )}
         {show && (
           <div className="mt-5 fade">
-            <p className="text-sm font-bold text-emerald-600">Resposta</p>
+            <p className="text-sm font-bold text-emerald-600">{tr('Resposta')}</p>
             <p className="text-lg font-semibold">
               {card.question.type === 'match'
                 ? (card.question.pairs ?? []).map((p) => p.join(' → ')).join(' · ')
@@ -1594,7 +1647,7 @@ export function Flashcards() {
 
       {!show && !result && (
         <Btn className="w-full" onClick={() => setShow(true)}>
-          Mostrar resposta
+          {tr('Mostrar resposta')}
         </Btn>
       )}
 
@@ -1612,10 +1665,10 @@ export function Flashcards() {
       {result && (
         <div className="space-y-3">
           <p className="text-center text-sm font-semibold text-slate-600">
-            {result.xp_gained > 0 ? `+${result.xp_gained} XP · ` : ''}caixa {result.box} de 5
+            {result.xp_gained > 0 ? tr('+{n} XP 🎉 ', { n: result.xp_gained }) : ''}{tr('caixa {n} de 5', { n: result.box })}
           </p>
           <Btn className="w-full" onClick={next}>
-            {idx + 1 < cards.length ? 'Próximo' : 'Concluir'}
+            {idx + 1 < cards.length ? tr('Próximo') : tr('Concluir')}
           </Btn>
         </div>
       )}
@@ -1624,6 +1677,7 @@ export function Flashcards() {
 }
 
 export function PrintSubject() {
+  const { tr } = useI18n();
   const { id } = useParams();
   const data = useAsync(async () => {
     if (!id) return null;
@@ -1631,9 +1685,9 @@ export function PrintSubject() {
     return { subject, questions };
   }, [id]);
 
-  if (data.loading) return <Spinner label="Preparando impressão…" />;
+  if (data.loading) return <Spinner label={tr('Preparando impressão…')} />;
   if (data.error) return <ErrorState message={data.error} onRetry={data.reload} />;
-  if (!data.data?.subject) return <EmptyState title="Matéria não encontrada" action={<Btn to="/materias">Voltar</Btn>} />;
+  if (!data.data?.subject) return <EmptyState title={tr('Matéria não encontrada')} action={<Btn to="/materias">{tr('Voltar')}</Btn>} />;
 
   const { subject, questions } = data.data;
 
@@ -1641,15 +1695,15 @@ export function PrintSubject() {
     <div className="max-w-3xl mx-auto p-6 text-slate-900">
       <div className="flex items-center justify-between mb-6 no-print">
         <Btn to={`/materias/${subject.id}`} v="s">
-          Voltar
+          {tr('Voltar')}
         </Btn>
         <Btn onClick={() => window.print()}>
-          <Printer size={16} /> Imprimir / salvar PDF
+          <Printer size={16} /> {tr('Imprimir / salvar PDF')}
         </Btn>
       </div>
       <h1 className="text-2xl font-extrabold">{subject.name}</h1>
       <p className="text-sm text-slate-500 mb-6">
-        {subject.topic || ''} · {questions.length} questões
+        {subject.topic || ''} · {tr('{n} questões', { n: questions.length })}
       </p>
 
       <ol className="space-y-6">
@@ -1676,12 +1730,14 @@ export function PrintSubject() {
                 ))}
               </ul>
             )}
-            {q.type === 'short' && <div className="mt-2 ml-4">Resposta: ______________________________</div>}
+            {q.type === 'short' && (
+              <div className="mt-2 ml-4">{tr('Resposta')}: ______________________________</div>
+            )}
           </li>
         ))}
       </ol>
 
-      <h2 className="text-xl font-extrabold mt-10 mb-3">Gabarito</h2>
+      <h2 className="text-xl font-extrabold mt-10 mb-3">{tr('Gabarito')}</h2>
       <ol className="space-y-2">
         {questions.map((q, i) => (
           <li key={q.id}>

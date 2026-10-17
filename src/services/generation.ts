@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { tr } from '../i18n';
 
 export interface GenerationResult {
   inserted: number;
@@ -11,7 +12,7 @@ export async function generateQuestions(subjectId: string): Promise<GenerationRe
   });
 
   if (error) {
-    let message = 'Não foi possível gerar as questões agora. Tente novamente em instantes.';
+    let message = tr('Não foi possível gerar as questões agora. Tente novamente em instantes.');
     const ctx = (error as { context?: Response }).context;
     if (ctx) {
       try {
@@ -20,7 +21,7 @@ export async function generateQuestions(subjectId: string): Promise<GenerationRe
       } catch {
         /* mantém a mensagem padrão */
       }
-      if (ctx.status === 404) message = 'A função de geração ainda não foi publicada no Supabase.';
+      if (ctx.status === 404) message = tr('A função de geração ainda não foi publicada no Supabase.');
     }
     throw new Error(message);
   }
