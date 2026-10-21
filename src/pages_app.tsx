@@ -969,7 +969,7 @@ export function NewSubject() {
               <p className="font-bold mt-3">{tr('Arraste seu arquivo aqui')}</p>
               <p className="text-sm text-slate-500">{tr('ou clique para selecionar')}</p>
               <p className="text-xs text-slate-400 mt-2">
-                {tr('Envie 1 arquivo PDF (máx. {maxPdf} páginas) ou PPTX (máx. {maxPptx} slides)', { maxPdf: MAX_PDF_PAGES, maxPptx: MAX_PPTX_SLIDES })}
+                {tr('1 arquivo por vez · PDF (máx. {maxPdf} págs) ou PPTX (máx. {maxPptx} slides) · até 20 MB', { maxPdf: MAX_PDF_PAGES, maxPptx: MAX_PPTX_SLIDES })}
               </p>
               <input type="file" accept=".pdf,.pptx" className="sr-only" onChange={(e) => add(e.target.files)} />
             </label>
@@ -984,7 +984,7 @@ export function NewSubject() {
                   ? 'border-amber-200 bg-amber-50/50'
                   : 'border-emerald-200 bg-emerald-50/50'
             }`}>
-              <div className="shrink-0 mt-0.5">
+              <div className="shrink-0 mt-0.5 relative">
                 {selectedFile.file.name.toLowerCase().endsWith('.pdf') ? (
                   <div className="w-12 h-14 rounded-lg bg-red-100 flex items-center justify-center">
                     <FileText className="text-red-600" size={24} />
@@ -994,9 +994,21 @@ export function NewSubject() {
                     <Layers className="text-orange-600" size={24} />
                   </div>
                 )}
+                {selectedFile.status === 'ready' && (
+                  <span className="absolute -top-2 -right-2 grid place-items-center w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold">
+                    ✓
+                  </span>
+                )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-base truncate">{selectedFile.file.name}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-bold text-base truncate">{selectedFile.file.name}</p>
+                  {selectedFile.status === 'ready' && (
+                    <span className="shrink-0 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      {tr('Arquivo anexado ✓')}
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-slate-600 mt-0.5">
                   {formatFileSize(selectedFile.file.size)}
                   {selectedFile.pageCount != null && selectedFile.pageCount > 0 && (
@@ -1005,12 +1017,10 @@ export function NewSubject() {
                       : tr('{n} slides', { n: selectedFile.pageCount })}
                     </>
                   )}
+                  {selectedFile.status === 'ready' && ' · ' + tr('Pronto para gerar')}
                 </p>
                 {selectedFile.status === 'reading' && (
                   <p className="text-xs font-semibold text-amber-600 mt-1">{tr('Lendo arquivo…')}</p>
-                )}
-                {selectedFile.status === 'ready' && (
-                  <p className="text-xs font-semibold text-emerald-600 mt-1">{tr('Pronto para gerar')}</p>
                 )}
                 {selectedFile.status === 'error' && selectedFile.errorMsg && (
                   <p className="text-xs font-semibold text-red-600 mt-1">{selectedFile.errorMsg}</p>
@@ -1020,6 +1030,7 @@ export function NewSubject() {
                 onClick={removeFile}
                 className="shrink-0 p-2 rounded-xl hover:bg-white/60 text-slate-400 hover:text-red-500 transition"
                 aria-label={tr('Remover arquivo')}
+                title={tr('Remover / Trocar arquivo')}
               >
                 <Trash2 size={18} />
               </button>

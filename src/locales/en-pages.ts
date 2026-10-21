@@ -116,9 +116,9 @@ export const EN_PAGES: Record<string, string> = {
   "Adicione seu material": "Add your material",
   "📎 Enviar arquivo": "📎 Upload file",
   "✍️ Colar texto": "✍️ Paste text",
-  "Arraste seus arquivos aqui": "Drag your files here",
+  "Arraste seu arquivo aqui": "Drag your file here",
   "ou clique para selecionar": "or click to select",
-  "Até 3 arquivos · PDF ou PPTX · até 20 MB cada": "Up to 3 files · PDF or PPTX · up to 20 MB each",
+  "1 arquivo por vez · PDF (máx. {maxPdf} págs) ou PPTX (máx. {maxPptx} slides) · até 20 MB": "1 file at a time · PDF (max {maxPdf} pages) or PPTX (max {maxPptx} slides) · up to 20 MB",
   "Cole aqui o texto do seu material (resumo, anotação, capítulo…).":
     "Paste your material's text here (summary, notes, chapter…).",
   "O conteúdo enviado é processado por um serviço de IA para gerar as questões e não deve conter dados pessoais de terceiros.":
@@ -127,6 +127,7 @@ export const EN_PAGES: Record<string, string> = {
   "Enviando…": "Uploading…",
   "Lendo…": "Reading…",
   "✕ Erro": "✕ Error",
+  "Arquivo anexado ✓": "File attached ✓",
   "Processando…": "Processing…",
   "Adicionar e gerar questões": "Add and generate questions",
   "Criar minha sessão": "Create my session",
