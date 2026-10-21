@@ -5,6 +5,7 @@ import DOMPurify from 'dompurify';
 import { Btn, Bar, Card, Select } from './ui';
 import { Icon } from './icons';
 import { shuffle } from './lib/shuffle';
+import { isShortAnswerCorrect } from './lib/answerMatch';
 import { EmptyState, ErrorState, Spinner } from './components/states';
 import { confirmDialog } from './components/confirm';
 import { useAuth } from './auth';
@@ -16,13 +17,6 @@ import { explainQuestion } from './services/ai';
 import { selectQuestions } from './engine/adaptive';
 import { playCorrect, playWrong } from './lib/sound';
 import type { Question, SessionRow, Subject } from './types';
-
-const norm = (s: string) =>
-  s
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim();
 
 export default function Session() {
   const { id } = useParams();
@@ -158,7 +152,7 @@ export default function Session() {
     const q = qs[idx];
     const correct =
       q.type === 'short'
-        ? !!q.accept?.some((a) => norm(v).includes(a))
+        ? isShortAnswerCorrect(v, q.answer, q.accept)
         : q.type === 'match'
           ? (q.pairs ?? []).every(([a, b]) => mt[a] === b)
           : v === q.answer;
@@ -196,10 +190,21 @@ export default function Session() {
   const revealed = !exam && ok !== null;
 
   const options = useMemo(() => shuffle(q?.options ?? []), [q?.id]);
-  const matchOptions = useMemo(
-    () => (q?.type === 'match' ? shuffle((q.pairs ?? []).map(([, b]) => b)) : []),
-    [q?.id],
-  );
+
+  // match: opções deduplicadas e controle de seleção única
+  const matchOptions = useMemo(() => {
+    if (q?.type !== 'match') return [];
+    const all = (q.pairs ?? []).map(([, b]) => b);
+    return [...new Set(all)];
+  }, [q?.id, q?.type]);
+
+  const usedMatchValues = useMemo(() => {
+    const used = new Set<string>();
+    for (const val of Object.values(mt)) {
+      if (val) used.add(val);
+    }
+    return used;
+  }, [mt]);
 
   if (loading) return <Spinner label={tr('Carregando a sessão…')} />;
   if (error) return <div className="max-w-xl mx-auto p-5"><ErrorState message={error} onRetry={() => window.location.reload()} /></div>;
@@ -229,12 +234,12 @@ export default function Session() {
         <button
           aria-label={tr('Sair da sessão')}
           onClick={async () => {
-            const ok = await confirmDialog({
+            const confirmed = await confirmDialog({
               title: tr('Sair da sessão'),
               message: tr('Sair? Sua sessão fica salva e você pode continuar depois.'),
               confirmLabel: tr('Sair'),
             });
-            if (ok) nav('/dashboard');
+            if (confirmed) nav('/dashboard');
           }}
           className="p-2 rounded-xl hover:bg-slate-100"
         >
@@ -288,7 +293,9 @@ export default function Session() {
                     disabled={ok !== null}
                     value={mt[a] ?? ''}
                     onChange={(v) => setMt({ ...mt, [a]: v })}
-                    options={matchOptions}
+                    options={matchOptions.filter(
+                      (opt) => opt === mt[a] || !usedMatchValues.has(opt),
+                    )}
                     className="flex-1 min-w-0"
                   />
                 </div>
@@ -361,13 +368,14 @@ export default function Session() {
               {explaining ? tr('Pensando…') : tr('Explique de novo')}
             </button>
           )}
+          {/* TAREFA 5: Card de explicação da IA com paleta consistente e alto contraste */}
           {explain && (
-            <div className="mt-3 rounded-2xl bg-white/70 border border-indigo-100 p-3">
-              <p className="text-xs font-bold text-indigo-600 mb-1 inline-flex items-center gap-1.5">
+            <div className="mt-3 rounded-2xl bg-indigo-50/90 dark:bg-slate-800/90 border border-indigo-200 dark:border-indigo-500/30 p-4">
+              <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 mb-1.5 inline-flex items-center gap-1.5">
                 <Icon name="estrela" size={16} /> {tr('Explicação da IA')}
               </p>
-              <p
-                className="text-sm text-slate-700 whitespace-pre-line"
+              <div
+                className="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-line [&_strong]:font-semibold [&_strong]:text-indigo-950 dark:[&_strong]:text-white"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(explain, { ALLOWED_TAGS: ['strong'] }) }}
               />
             </div>

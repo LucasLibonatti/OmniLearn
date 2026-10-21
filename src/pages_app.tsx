@@ -66,6 +66,7 @@ import * as statsApi from './services/stats';
 import { listAchievements, newlyUnlocked } from './services/achievements';
 import { formatDate, greeting, lastNDates, shortAgo, todaySP, weekLabel } from './lib/dates';
 import { xpInLevel, XP_PER_LEVEL } from './engine/xp';
+import { extractPdf, extractPptx, extractText, inspectAndExtractFile, MAX_PDF_PAGES, MAX_PPTX_SLIDES } from './lib/extract';
 import type { Material, SubjectWithStats } from './types';
 
 const navItems = (tr: (s: string, vars?: any) => string) => [
@@ -668,7 +669,7 @@ export function SubjectPage() {
           <Btn to={`/sessao/configurar/${subject.id}`} disabled={questions === 0}>
             {tr('Estudar agora')}
           </Btn>
-          <Btn v="s" to={`/materias/nova?subject=${subject.id}`} disabled={materials.length >= 3}>
+          <Btn v="s" to={`/materias/nova?subject=${subject.id}`} disabled={materials.length >= 1}>
             {tr('Adicionar material')}
           </Btn>
           <Btn v="s" onClick={generate} disabled={generating || sumBusy || materials.length === 0}>
@@ -773,10 +774,23 @@ export function SubjectPage() {
   );
 }
 
+interface SelectedFileInfo {
+  file: File;
+  status: 'idle' | 'reading' | 'ready' | 'error';
+  pageCount?: number;
+  errorMsg?: string;
+}
+
 interface Entry {
   name: string;
   status: 'pending' | 'uploading' | 'reading' | 'ready' | 'error';
   msg?: string;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function NewSubject() {
@@ -791,7 +805,7 @@ export function NewSubject() {
 
   const [name, setName] = useState('');
   const [topic, setTopic] = useState('');
-  const [files, setFiles] = useState<File[]>([]);
+  const [selectedFile, setSelectedFile] = useState<SelectedFileInfo | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
@@ -801,25 +815,38 @@ export function NewSubject() {
   const [pasted, setPasted] = useState('');
 
   const subjectId = existingId ?? created;
+  const files = selectedFile?.file ? [selectedFile.file] : [];
 
-  const add = (list: FileList | null) => {
-    if (!list) return;
-    const valid: File[] = [];
-    const errs: string[] = [];
-    for (const f of Array.from(list)) {
-      if (!/\.(pdf|pptx)$/i.test(f.name)) {
-        errs.push(tr('{name}: só aceitamos PDF e PPTX', { name: f.name }));
-        continue;
-      }
-      if (f.size > 20 * 1024 * 1024) {
-        errs.push(tr('{name}: maior que 20 MB', { name: f.name }));
-        continue;
-      }
-      valid.push(f);
+  const add = async (list: FileList | null) => {
+    if (!list || list.length === 0) return;
+    const f = list[0];
+    if (!f) return;
+    if (!/\.(pdf|pptx)$/i.test(f.name)) {
+      setStatus(tr('{name}: só aceitamos PDF e PPTX', { name: f.name }));
+      return;
     }
-    setFiles((prev) => [...prev, ...valid].slice(0, 3));
-    if (errs.length) setStatus(errs.join(' · '));
-    else setStatus('');
+    if (f.size > 20 * 1024 * 1024) {
+      setStatus(tr('{name}: maior que 20 MB', { name: f.name }));
+      return;
+    }
+    setStatus('');
+    setSelectedFile({ file: f, status: 'reading' });
+    // Valida páginas imediatamente
+    try {
+      const inspection = await inspectAndExtractFile(f);
+      if (inspection.error) {
+        setSelectedFile({ file: f, status: 'error', errorMsg: inspection.error, pageCount: inspection.pageCount });
+      } else {
+        setSelectedFile({ file: f, status: 'ready', pageCount: inspection.pageCount });
+      }
+    } catch {
+      setSelectedFile({ file: f, status: 'ready' });
+    }
+  };
+
+  const removeFile = () => {
+    setSelectedFile(null);
+    setStatus('');
   };
 
   const updateEntry = (i: number, patch: Partial<Entry>) =>
@@ -840,8 +867,8 @@ export function NewSubject() {
       }
       if (!sid) throw new Error(tr('Não foi possível criar a matéria.'));
       const already = await countMaterials(sid);
-      const incoming = mode === 'text' ? 1 : files.length;
-      if (already + incoming > 3) throw new Error(tr('Cada matéria aceita no máximo 3 materiais.'));
+      const incoming = mode === 'text' ? 1 : (selectedFile ? 1 : 0);
+      if (already + incoming > 1) throw new Error(tr('Cada matéria aceita apenas 1 arquivo por vez. Remova o material anterior primeiro.'));
       if (incoming === 0 && already === 0) throw new Error(tr('Envie um arquivo ou cole um texto.'));
 
       if (mode === 'text') {
@@ -849,26 +876,25 @@ export function NewSubject() {
         setStatus(tr('Salvando o texto…'));
         await createTextMaterial(userId, sid, pasted.trim(), name.trim() || tr('Texto colado'));
       } else {
-        setEntries(files.map((f) => ({ name: f.name, status: 'pending' })));
-        const { extractText } = await import('./lib/extract');
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          updateEntry(i, { status: 'uploading' });
-          const mat = await uploadMaterial(userId, sid, file);
-          updateEntry(i, { status: 'reading' });
-          try {
-            const ex = await extractText(file);
-            if (ex.empty) {
-              await setMaterialError(mat.id, tr('Não conseguimos ler texto suficiente neste arquivo (pode ser escaneado ou só com imagens).'));
-              updateEntry(i, { status: 'error', msg: tr('Sem texto legível') });
-            } else {
-              await setMaterialExtracted(mat.id, ex.pages, ex.text);
-              updateEntry(i, { status: 'ready' });
-            }
-          } catch (err) {
-            await setMaterialError(mat.id, (err as Error).message);
-            updateEntry(i, { status: 'error', msg: (err as Error).message });
+        if (!selectedFile?.file) throw new Error(tr('Selecione um arquivo.'));
+        if (selectedFile.status === 'error') throw new Error(selectedFile.errorMsg || tr('Arquivo inválido.'));
+        setEntries([{ name: selectedFile.file.name, status: 'pending' }]);
+        const file = selectedFile.file;
+        updateEntry(0, { status: 'uploading' });
+        const mat = await uploadMaterial(userId, sid, file);
+        updateEntry(0, { status: 'reading' });
+        try {
+          const ex = await extractText(file);
+          if (ex.empty) {
+            await setMaterialError(mat.id, tr('Não conseguimos ler texto suficiente neste arquivo (pode ser escaneado ou só com imagens).'));
+            updateEntry(0, { status: 'error', msg: tr('Sem texto legível') });
+          } else {
+            await setMaterialExtracted(mat.id, ex.pages, ex.text);
+            updateEntry(0, { status: 'ready' });
           }
+        } catch (err) {
+          await setMaterialError(mat.id, (err as Error).message);
+          updateEntry(0, { status: 'error', msg: (err as Error).message });
         }
       }
 
@@ -929,20 +955,77 @@ export function NewSubject() {
       </div>
 
       {mode === 'file' ? (
-        <label
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e: DragEvent) => {
-            e.preventDefault();
-            add(e.dataTransfer.files);
-          }}
-          className="block cursor-pointer rounded-3xl border-2 border-dashed border-indigo-200 bg-indigo-50/50 p-10 text-center hover:bg-indigo-50 focus-within:outline-2"
-        >
-          <Upload className="mx-auto text-indigo-600" size={32} />
-          <p className="font-bold mt-3">{tr('Arraste seus arquivos aqui')}</p>
-          <p className="text-sm text-slate-500">{tr('ou clique para selecionar')}</p>
-          <p className="text-xs text-slate-400 mt-2">{tr('Até 3 arquivos · PDF ou PPTX · até 20 MB cada')}</p>
-          <input type="file" multiple accept=".pdf,.pptx" className="sr-only" onChange={(e) => add(e.target.files)} />
-        </label>
+        <>
+          {!selectedFile && (
+            <label
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e: DragEvent) => {
+                e.preventDefault();
+                add(e.dataTransfer.files);
+              }}
+              className="block cursor-pointer rounded-3xl border-2 border-dashed border-indigo-200 bg-indigo-50/50 p-10 text-center hover:bg-indigo-50 focus-within:outline-2"
+            >
+              <Upload className="mx-auto text-indigo-600" size={32} />
+              <p className="font-bold mt-3">{tr('Arraste seu arquivo aqui')}</p>
+              <p className="text-sm text-slate-500">{tr('ou clique para selecionar')}</p>
+              <p className="text-xs text-slate-400 mt-2">
+                {tr('Envie 1 arquivo PDF (máx. {maxPdf} páginas) ou PPTX (máx. {maxPptx} slides)', { maxPdf: MAX_PDF_PAGES, maxPptx: MAX_PPTX_SLIDES })}
+              </p>
+              <input type="file" accept=".pdf,.pptx" className="sr-only" onChange={(e) => add(e.target.files)} />
+            </label>
+          )}
+
+          {/* Card Visual de Arquivo Selecionado */}
+          {selectedFile && (
+            <Card className={`flex items-start gap-4 pop border-2 ${
+              selectedFile.status === 'error'
+                ? 'border-red-300 bg-red-50'
+                : selectedFile.status === 'reading'
+                  ? 'border-amber-200 bg-amber-50/50'
+                  : 'border-emerald-200 bg-emerald-50/50'
+            }`}>
+              <div className="shrink-0 mt-0.5">
+                {selectedFile.file.name.toLowerCase().endsWith('.pdf') ? (
+                  <div className="w-12 h-14 rounded-lg bg-red-100 flex items-center justify-center">
+                    <FileText className="text-red-600" size={24} />
+                  </div>
+                ) : (
+                  <div className="w-12 h-14 rounded-lg bg-orange-100 flex items-center justify-center">
+                    <Layers className="text-orange-600" size={24} />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-base truncate">{selectedFile.file.name}</p>
+                <p className="text-sm text-slate-600 mt-0.5">
+                  {formatFileSize(selectedFile.file.size)}
+                  {selectedFile.pageCount != null && selectedFile.pageCount > 0 && (
+                    <> · {selectedFile.file.name.toLowerCase().endsWith('.pdf')
+                      ? tr('{n} páginas', { n: selectedFile.pageCount })
+                      : tr('{n} slides', { n: selectedFile.pageCount })}
+                    </>
+                  )}
+                </p>
+                {selectedFile.status === 'reading' && (
+                  <p className="text-xs font-semibold text-amber-600 mt-1">{tr('Lendo arquivo…')}</p>
+                )}
+                {selectedFile.status === 'ready' && (
+                  <p className="text-xs font-semibold text-emerald-600 mt-1">{tr('Pronto para gerar')}</p>
+                )}
+                {selectedFile.status === 'error' && selectedFile.errorMsg && (
+                  <p className="text-xs font-semibold text-red-600 mt-1">{selectedFile.errorMsg}</p>
+                )}
+              </div>
+              <button
+                onClick={removeFile}
+                className="shrink-0 p-2 rounded-xl hover:bg-white/60 text-slate-400 hover:text-red-500 transition"
+                aria-label={tr('Remover arquivo')}
+              >
+                <Trash2 size={18} />
+              </button>
+            </Card>
+          )}
+        </>
       ) : (
         <textarea
           value={pasted}
@@ -982,7 +1065,7 @@ export function NewSubject() {
         status && <p className="text-sm font-medium text-slate-600">{status}</p>
       )}
 
-      <Btn disabled={(mode === 'text' ? pasted.trim().length < 200 : files.length === 0) || busy} onClick={run}>
+      <Btn disabled={(mode === 'text' ? pasted.trim().length < 200 : !selectedFile || selectedFile.status !== 'ready') || busy} onClick={run}>
         <Sparkles size={18} />
         {busy ? tr('Processando…') : existingId ? tr('Adicionar e gerar questões') : tr('Criar minha sessão')}
       </Btn>
