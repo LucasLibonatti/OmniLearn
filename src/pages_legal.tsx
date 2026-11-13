@@ -73,6 +73,9 @@ export function Guidelines() {
       <H>{t('legal.h.privacy')}</H>
       <p>{t('legal.p.privacy')}</p>
 
+      <H>{t('legal.h.transfer')}</H>
+      <p>{t('legal.p.transfer')}</p>
+
       <H>{t('legal.h.property')}</H>
       <p>{t('legal.p.property')}</p>
 

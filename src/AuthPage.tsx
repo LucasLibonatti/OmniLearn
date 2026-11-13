@@ -28,6 +28,8 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -47,8 +49,23 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
         setMsg(t('auth.err.short'));
       } else if (password !== confirm) {
         setMsg(t('auth.err.match'));
+      } else if (!acceptedTerms) {
+        setMsg(t('auth.err.terms'));
+      } else if (!acceptedPrivacy) {
+        setMsg(t('auth.err.privacy'));
       } else {
-        const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { name: name.trim() } } });
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name: name.trim(),
+              terms_version: '1.0',
+              terms_accepted_at: new Date().toISOString(),
+              privacy_accepted_at: new Date().toISOString(),
+            },
+          },
+        });
         if (error) setMsg(error.message);
         else if (!data.session) setMsg(t('auth.done.signup'));
       }
@@ -77,6 +94,42 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
             <Field label={t('auth.email')} type="email" value={email} onChange={setEmail} />
             <Field label={t('auth.password')} type="password" value={password} onChange={setPassword} />
             {!login && <Field label={t('auth.confirm')} type="password" value={confirm} onChange={setConfirm} />}
+            {!login && (
+              <div className="space-y-2 text-sm">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={acceptedTerms}
+                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    className="mt-1 w-4 h-4 accent-indigo-600"
+                    required
+                  />
+                  <span className="font-semibold text-slate-700">
+                    {t('auth.terms.1')}
+                    <Link to="/diretrizes" className="font-extrabold text-indigo-600 underline">
+                      {t('auth.terms.2')}
+                    </Link>
+                    {t('auth.terms.3')}
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={acceptedPrivacy}
+                    onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                    className="mt-1 w-4 h-4 accent-indigo-600"
+                    required
+                  />
+                  <span className="font-semibold text-slate-700">
+                    {t('auth.privacy.1')}
+                    <Link to="/diretrizes" className="font-extrabold text-indigo-600 underline">
+                      {t('auth.privacy.2')}
+                    </Link>
+                    {t('auth.privacy.3')}
+                  </span>
+                </label>
+              </div>
+            )}
             {msg && <p role="alert" className="text-sm font-bold text-red-600">{msg}</p>}
             <button
               type="submit"

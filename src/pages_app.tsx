@@ -954,6 +954,15 @@ export function NewSubject() {
         ))}
       </div>
 
+      {/* Aviso proeminente de dados sensíveis proibidos */}
+      <div className="mt-3 p-3 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+        <span className="shrink-0 text-lg" aria-hidden>⚠️</span>
+        <div className="text-sm font-semibold text-amber-800 leading-relaxed">
+          <p className="font-black">{tr('upload.warning.title')}</p>
+          <p>{tr('upload.warning.desc')}</p>
+        </div>
+      </div>
+
       {mode === 'file' ? (
         <>
           {!selectedFile && (

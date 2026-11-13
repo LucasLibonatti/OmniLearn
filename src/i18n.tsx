@@ -103,7 +103,17 @@ const pt = {
   'auth.err.short': 'A senha precisa ter pelo menos 6 caracteres.',
   'auth.err.match': 'As senhas não coincidem.',
   'auth.err.login': 'E-mail ou senha incorretos.',
+  'auth.err.terms': 'Você deve aceitar os Termos de Uso para continuar.',
+  'auth.err.privacy': 'Você deve aceitar a Política de Privacidade para continuar.',
   'auth.done.signup': 'Conta criada! Enviamos um e-mail para você confirmar. Depois é só entrar.',
+  'auth.terms.1': 'Li e aceito os ',
+  'auth.terms.2': 'Termos de Uso',
+  'auth.terms.3': '.',
+  'auth.privacy.1': 'Li e aceito a ',
+  'auth.privacy.2': 'Política de Privacidade',
+  'auth.privacy.3': '.',
+  'upload.warning.title': 'PROIBIDO: Dados sensíveis e de terceiros',
+  'upload.warning.desc': 'Não envie CPF, RG, CNH, passaporte, dados de saúde, bancários, biométricos, genéticos, origem racial/étnica, convicção religiosa, opinião política, filiação sindical, vida sexual — nem dados de terceiros sem consentimento, nem material com copyright. O conteúdo vai para IA de terceiros (Groq/Llama 3.3).',
 
   'support.title': 'Suporte',
   'support.sub': 'Precisa de ajuda ou quer dar uma sugestão? Fale com a gente.',
@@ -145,18 +155,21 @@ const pt = {
   'legal.h.acceptable': 'Uso aceitável',
   'legal.li.1': 'Você é responsável pelo conteúdo que envia e por ter o direito de usá-lo.',
   'legal.li.2':
-    'Não envie dados pessoais sensíveis de terceiros nem conteúdo ilegal, ofensivo ou protegido por direitos autorais sem autorização.',
+    'É **expressamente proibido** enviar: (a) **dados pessoais sensíveis** (Art. 5º, II e Art. 11 da LGPD): saúde, biometria, origem racial/étnica, convicção religiosa, opinião política, filiação sindical, vida sexual, dados genéticos, **documentos oficiais (CPF, RG, CNH, passaporte)**, dados financeiros/bancários; (b) dados de terceiros sem consentimento; (c) conteúdo protegido por direitos autorais sem autorização; (d) conteúdo ilegal ou ofensivo.',
   'legal.li.3': 'Não é permitido tentar burlar limites de uso, automatizar acessos de forma abusiva ou explorar falhas do sistema.',
   'legal.li.4': 'A conta é pessoal. Não compartilhe suas credenciais.',
   'legal.h.ai': 'Conteúdo gerado por IA',
   'legal.p.ai':
     'As questões, respostas e explicações são geradas automaticamente por IA e podem conter erros. Nós não garantimos que estejam corretas, completas ou atualizadas. Confira sempre com seu material de estudo e use o bom senso.',
-  'legal.h.law': 'Isenção de responsabilidade',
+  'legal.h.law': 'Isenção de responsabilidade e natureza do projeto',
   'legal.p.law':
-    'O OmniLearn é fornecido "como está", sem garantias de qualquer tipo. Não nos responsabilizamos por decisões, resultados acadêmicos, notas, aprovações ou quaisquer danos decorrentes do uso indevido do conteúdo gerado ou das informações exibidas.',
+    'O OmniLearn é um projeto **experimental, acadêmico e de portfólio**, **sem fins lucrativos**, fornecido **"no estado em que se encontra" (as-is)**, sem garantias de qualquer natureza — expressas ou implícitas. Isso inclui, mas não se limita a: disponibilidade contínua (sujeito a pausas de infraestrutura gratuita), guarda permanente de arquivos enviados, correção ou atualização do conteúdo gerado por IA. Não nos responsabilizamos por decisões, resultados acadêmicos, notas, aprovações ou quaisquer danos decorrentes do uso indevido do conteúdo gerado ou das informações exibidas. O processamento de IA é realizado por terceiros e pode conter imprecisões, alucinações ou erros factuais; o usuário assume todo risco pelo uso do conteúdo gerado.',
   'legal.h.privacy': 'Privacidade e seus dados',
   'legal.p.privacy':
     'Guardamos apenas o necessário para o funcionamento do serviço: seus dados de conta, os materiais enviados, as questões geradas e seu histórico de respostas. Você pode excluir sua conta a qualquer momento na página de perfil.',
+  'legal.h.transfer': 'Transferência internacional e subprocessadores (Art. 33 LGPD)',
+  'legal.p.transfer':
+    'Ao usar o OmniLearn, seus dados pessoais e o conteúdo que você envia são processados por **serviços terceiros** localizados fora do Brasil. Os subprocessadores atuais são:\n\n• **Groq Inc. (EUA)** — inferência de IA (modelo Llama 3.3 da Meta) para gerar questões, resumos e explicações.\n• **Supabase Inc. (EUA / Singapura)** — autenticação, banco de dados PostgreSQL, armazenamento de arquivos (Storage) e Edge Functions.\n\n**Base legal para transferência (Art. 33 LGPD):** a transferência baseia-se em **cláusulas contratuais padrão (SCCs)** firmadas com cada subprocessador e no **legítimo interesse** do controlador para viabilizar a prestação do serviço. Ao criar sua conta e enviar materiais, você **consente expressamente** com esta transferência internacional de dados.',
   'legal.h.property': 'Propriedade dos materiais',
   'legal.p.property':
     'Os direitos sobre os arquivos que você envia continuam sendo seus. Ao enviar, você nos autoriza a processá-los apenas para gerar as questões e operar o serviço.',
@@ -235,7 +248,17 @@ const en: Record<TKey, string> = {
   'auth.err.short': 'The password needs at least 6 characters.',
   'auth.err.match': 'The passwords do not match.',
   'auth.err.login': 'Incorrect email or password.',
+  'auth.err.terms': 'You must accept the Terms of Use to continue.',
+  'auth.err.privacy': 'You must accept the Privacy Policy to continue.',
   'auth.done.signup': 'Account created! We sent you a confirmation email. Then just log in.',
+  'auth.terms.1': 'I have read and accept the ',
+  'auth.terms.2': 'Terms of Use',
+  'auth.terms.3': '.',
+  'auth.privacy.1': 'I have read and accept the ',
+  'auth.privacy.2': 'Privacy Policy',
+  'auth.privacy.3': '.',
+  'upload.warning.title': 'FORBIDDEN: Sensitive and third-party data',
+  'upload.warning.desc': 'Do not upload CPF, RG, CNH, passport, health, banking, biometric, genetic data, racial/ethnic origin, religious belief, political opinion, union membership, sex life — nor third-party data without consent, nor copyrighted material. Content is sent to third-party AI (Groq/Llama 3.3).',
 
   'support.title': 'Support',
   'support.sub': 'Need help or want to share an idea? Talk to us.',
@@ -277,18 +300,21 @@ const en: Record<TKey, string> = {
   'legal.h.acceptable': 'Acceptable use',
   'legal.li.1': 'You are responsible for the content you upload and for having the right to use it.',
   'legal.li.2':
-    "Do not upload sensitive personal data from third parties, or illegal, offensive, or copyrighted content without permission.",
+    'It is **expressly prohibited** to upload: (a) **sensitive personal data** (LGPD Art. 5º II, Art. 11): health, biometrics, racial/ethnic origin, religious belief, political opinion, union membership, sex life, genetic data, **official documents (CPF, RG, CNH, passport)**, financial/banking data; (b) third-party data without consent; (c) copyrighted content without permission; (d) illegal or offensive content.',
   'legal.li.3': 'Do not try to bypass usage limits, abuse automated access or exploit flaws in the system.',
   'legal.li.4': 'Accounts are personal. Do not share your credentials.',
   'legal.h.ai': 'AI-generated content',
   'legal.p.ai':
     'Questions, answers and explanations are generated automatically by AI and may contain errors. We do not guarantee they are correct, complete or up to date. Always cross-check with your study materials and use common sense.',
-  'legal.h.law': 'Disclaimer',
+  'legal.h.law': 'Disclaimer and project nature',
   'legal.p.law':
-    'OmniLearn is provided "as is", without warranties of any kind. We are not responsible for decisions, academic results, grades, approvals or any damages arising from misuse of the generated content or the information displayed.',
+    'OmniLearn is an **experimental, academic and portfolio project**, **non-profit**, provided **"as is"**, without warranties of any kind — express or implied. This includes, but is not limited to: continuous availability (subject to free infrastructure downtime), permanent storage of uploaded files, correction or updating of AI-generated content. We are not responsible for decisions, academic results, grades, approvals or any damages arising from misuse of the generated content or the information displayed. AI processing is performed by third parties and may contain inaccuracies, hallucinations or factual errors; the user assumes all risk from using the generated content.',
   'legal.h.privacy': 'Privacy and your data',
   'legal.p.privacy':
     'We only store what the service needs: your account data, the materials you upload, the generated questions and your answer history. You can delete your account at any time from the profile page.',
+  'legal.h.transfer': 'International transfer and subprocessors (Art. 33 LGPD)',
+  'legal.p.transfer':
+    'By using OmniLearn, your personal data and the content you upload are processed by **third-party services** located outside Brazil. Current subprocessors:\n\n• **Groq Inc. (USA)** — AI inference (Meta\'s Llama 3.3 model) to generate questions, summaries and explanations.\n• **Supabase Inc. (USA / Singapore)** — authentication, PostgreSQL database, file storage (Storage) and Edge Functions.\n\n**Legal basis for transfer (Art. 33 LGPD):** the transfer is based on **standard contractual clauses (SCCs)** signed with each subprocessor and on the **legitimate interest** of the controller to provide the service. By creating your account and uploading materials, you **expressly consent** to this international data transfer.',
   'legal.h.property': 'Ownership of materials',
   'legal.p.property':
     'The rights to the files you upload remain yours. By uploading, you authorize us to process them only to generate questions and operate the service.',
