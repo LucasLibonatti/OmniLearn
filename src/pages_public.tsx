@@ -1,12 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Upload, Sparkles, Timer, TrendingUp, Sun, Moon, ArrowRight, Check } from 'lucide-react';
-import { Btn, Card, Logo, LangSwitch } from './ui';
-import { mascotSrc } from './icons';
+import {
+  ArrowRight,
+  BarChart3,
+  Check,
+  CheckCircle2,
+  FileText,
+  Layers,
+  LayoutDashboard,
+  Moon,
+  RotateCcw,
+  Sparkles,
+  Sun,
+  Timer,
+  TrendingUp,
+  Upload,
+  X,
+  XCircle,
+} from 'lucide-react';
+import { Bar, Btn, Card, LangSwitch, Logo, StatusDot } from './ui';
+import { Icon, mascotSrc } from './icons';
 import { FlatIcon, type FlatIconName } from './brand-icons';
 import { useSettings } from './hooks/useSettings';
-import { useI18n } from './i18n';
-import type { TKey } from './i18n';
+import { useI18n, type TKey } from './i18n';
 
 const steps: [typeof Upload, TKey, TKey][] = [
   [Upload, 'how.1.t', 'how.1.d'],
@@ -22,147 +38,445 @@ const feats: [FlatIconName, TKey][] = [
   ['trophy', 'feats.xp'],
 ];
 
-// Exemplo que fica girando na página inicial a cada poucos segundos.
-const showcasePt = [
+interface DemoQuestion {
+  materia: string;
+  pergunta: string;
+  opcoes: string[];
+  correta: number;
+  explicacao: string;
+}
+
+const showcasePt: DemoQuestion[] = [
   {
     materia: 'História',
-    n: 7,
-    total: 18,
-    seq: 12,
-    progresso: 40,
-    pergunta: 'Qual acontecimento marca o início da Revolução Francesa?',
+    pergunta: 'Qual acontecimento marca o início da Revolução Francesa em 1789?',
     opcoes: ['Congresso de Viena', 'Queda da Bastilha', 'Revolução Industrial'],
     correta: 1,
+    explicacao: 'A Tomada da Bastilha (14/07/1789) simbolizou a queda do absolutismo na França.',
   },
   {
     materia: 'Biologia',
-    n: 3,
-    total: 15,
-    seq: 27,
-    progresso: 20,
-    pergunta: 'Qual organela é responsável pela respiração celular?',
+    pergunta: 'Qual organela é responsável pela respiração celular e produção de ATP?',
     opcoes: ['Mitocôndria', 'Ribossomo', 'Lisossomo'],
     correta: 0,
+    explicacao: 'As mitocôndrias convertem nutrientes em energia química (ATP) para a célula.',
   },
   {
     materia: 'Matemática',
-    n: 11,
-    total: 20,
-    seq: 41,
-    progresso: 55,
     pergunta: 'Qual é o valor de x na equação 2x + 6 = 18?',
     opcoes: ['6', '9', '12'],
     correta: 0,
+    explicacao: 'Subtraindo 6 dos dois lados obtemos 2x = 12, logo x = 6.',
   },
   {
-    materia: 'Geografia',
-    n: 5,
-    total: 16,
-    seq: 8,
-    progresso: 33,
-    pergunta: 'Qual é o maior bioma brasileiro?',
-    opcoes: ['Cerrado', 'Amazônia', 'Caatinga'],
+    materia: 'Redes',
+    pergunta: 'Qual protocolo garante entrega confiável e ordenada de pacotes na internet?',
+    opcoes: ['UDP', 'TCP', 'ICMP'],
     correta: 1,
+    explicacao: 'O TCP usa handshake, confirmação (ACK) e retransmissão para garantir entrega confiável.',
   },
 ];
 
-const showcaseEn = [
+const showcaseEn: DemoQuestion[] = [
   {
     materia: 'History',
-    n: 7,
-    total: 18,
-    seq: 12,
-    progresso: 40,
-    pergunta: 'Which event marks the beginning of the French Revolution?',
+    pergunta: 'Which event marks the beginning of the French Revolution in 1789?',
     opcoes: ['Congress of Vienna', 'Storming of the Bastille', 'Industrial Revolution'],
     correta: 1,
+    explicacao: 'The Storming of the Bastille (July 14, 1789) became the symbol of the end of absolutism.',
   },
   {
     materia: 'Biology',
-    n: 3,
-    total: 15,
-    seq: 27,
-    progresso: 20,
-    pergunta: 'Which organelle is responsible for cellular respiration?',
+    pergunta: 'Which organelle is responsible for cellular respiration and ATP production?',
     opcoes: ['Mitochondria', 'Ribosome', 'Lysosome'],
     correta: 0,
+    explicacao: 'Mitochondria convert nutrients into usable chemical energy (ATP) for the cell.',
   },
   {
     materia: 'Mathematics',
-    n: 11,
-    total: 20,
-    seq: 41,
-    progresso: 55,
     pergunta: 'What is the value of x in the equation 2x + 6 = 18?',
     opcoes: ['6', '9', '12'],
     correta: 0,
+    explicacao: 'Subtracting 6 from both sides gives 2x = 12, so x = 6.',
   },
   {
-    materia: 'Geography',
-    n: 5,
-    total: 16,
-    seq: 8,
-    progresso: 33,
-    pergunta: "What is Brazil's largest biome?",
-    opcoes: ['Cerrado', 'Amazon', 'Caatinga'],
+    materia: 'Networking',
+    pergunta: 'Which protocol guarantees reliable, ordered packet delivery over the internet?',
+    opcoes: ['UDP', 'TCP', 'ICMP'],
     correta: 1,
+    explicacao: 'TCP uses handshakes, acknowledgments (ACKs) and retransmission for reliable delivery.',
   },
 ];
 
-function Showcase({ t, lang }: { t: ReturnType<typeof useI18n>['t']; lang: 'pt' | 'en' }) {
-  const [i, setI] = useState(0);
-  const [revealed, setRevealed] = useState(false);
+function Showcase({
+  t,
+  lang,
+  onStart,
+}: {
+  t: ReturnType<typeof useI18n>['t'];
+  lang: 'pt' | 'en';
+  onStart: () => void;
+}) {
   const showcase = lang === 'en' ? showcaseEn : showcasePt;
-
-  useEffect(() => {
-    setRevealed(false);
-    const reveal = setTimeout(() => setRevealed(true), 1400);
-    const next = setTimeout(() => setI((v) => (v + 1) % showcase.length), 4200);
-    return () => {
-      clearTimeout(reveal);
-      clearTimeout(next);
-    };
-  }, [i]);
+  const [i, setI] = useState(0);
+  const [picked, setPicked] = useState<number | null>(null);
+  const [score, setScore] = useState(0);
+  const [xp, setXp] = useState(0);
+  const [done, setDone] = useState(false);
 
   const d = showcase[i];
+  const answered = picked !== null;
+  const isRight = picked === d.correta;
+
+  const choose = (k: number) => {
+    if (answered) return;
+    setPicked(k);
+    if (k === d.correta) {
+      setScore((s) => s + 1);
+      setXp((x) => x + 10);
+    }
+  };
+
+  const advance = () => {
+    if (i + 1 < showcase.length) {
+      setI(i + 1);
+      setPicked(null);
+    } else {
+      setDone(true);
+    }
+  };
+
+  const reset = () => {
+    setI(0);
+    setPicked(null);
+    setScore(0);
+    setXp(0);
+    setDone(false);
+  };
+
+  if (done) {
+    return (
+      <Card className="shadow-[0_18px_50px_-28px_rgba(15,23,42,.45)] text-center py-8 px-6">
+        <Icon name="party" size={60} className="pop mx-auto" />
+        <h3 className="text-2xl font-black mt-3">{t('showcase.done.title', { xp })}</h3>
+        <p className="text-slate-600 font-semibold mt-2 max-w-lg mx-auto">
+          {t('showcase.done.sub', { score, total: showcase.length })}
+        </p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <Btn onClick={onStart}>
+            {t('cta.button')} <ArrowRight size={17} />
+          </Btn>
+          <Btn v="s" onClick={reset}>
+            <RotateCcw size={16} /> {t('showcase.replay')}
+          </Btn>
+        </div>
+      </Card>
+    );
+  }
+
+  const pct = Math.round(((i + (answered ? 1 : 0)) / showcase.length) * 100);
+
   return (
-    <Card className="shadow-[0_18px_50px_-28px_rgba(15,23,42,.45)]">
+    <Card className="shadow-[0_18px_50px_-28px_rgba(15,23,42,.45)] relative">
       <div key={i} className="fade">
-        <div className="flex justify-between items-center text-sm font-extrabold text-slate-500">
+        <div className="flex flex-wrap justify-between items-center gap-2 text-sm font-extrabold text-slate-500">
           <span>
-            {d.materia} · {t('showcase.question', { n: d.n, total: d.total })}
+            {d.materia} · {t('showcase.question', { n: i + 1, total: showcase.length })}
           </span>
-          <span className="inline-flex items-center gap-1 text-violet-600">
-            <FlatIcon name="flame" size={20} bare /> {d.seq}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700">
+              {t('showcase.hint')}
+            </span>
+            <span className="inline-flex items-center gap-1 text-amber-600 font-black">
+              {xp} XP
+            </span>
+          </div>
         </div>
         <div className="h-3 rounded-full bg-slate-100 mt-3 overflow-hidden">
           <div
-            className="h-full rounded-full bg-indigo-500 transition-all duration-1000 ease-out"
-            style={{ width: `${d.progresso}%` }}
+            className="h-full rounded-full bg-indigo-500 transition-all duration-500 ease-out"
+            style={{ width: `${Math.max(12, pct)}%` }}
           />
         </div>
-        <p className="font-extrabold text-lg mt-5">{d.pergunta}</p>
-        <div className="mt-4 grid gap-2.5">
+        <p className="font-extrabold text-lg sm:text-xl mt-5">{d.pergunta}</p>
+        <div className="mt-4 grid gap-2.5 relative">
           {d.opcoes.map((o, k) => {
-            const right = revealed && k === d.correta;
+            const right = answered && k === d.correta;
+            const wrong = answered && picked === k && k !== d.correta;
             return (
-              <div
+              <button
                 key={o}
-                className={`flex items-center justify-between gap-2 rounded-2xl border-2 px-4 py-3 font-bold transition-all duration-300 ${
+                type="button"
+                disabled={answered}
+                onClick={() => choose(k)}
+                className={`flex items-center justify-between gap-3 text-left rounded-2xl border-2 px-4 py-3 font-bold transition-all duration-200 cursor-pointer disabled:cursor-default ${
                   right
-                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                    : 'border-slate-200 text-slate-700'
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700 pop'
+                    : wrong
+                      ? 'border-red-400 bg-red-50 text-red-700 shake'
+                      : 'border-slate-200 text-slate-700 hover:border-indigo-400 hover:bg-indigo-50/40'
                 }`}
               >
-                {o}
-                {right && <Check size={18} className="shrink-0" />}
-              </div>
+                <span className="flex items-center gap-3">
+                  <span className="grid place-items-center w-7 h-7 rounded-lg bg-slate-100 text-xs font-extrabold text-slate-600 shrink-0">
+                    {'ABC'[k]}
+                  </span>
+                  {o}
+                </span>
+                {right && <Check size={18} className="shrink-0 text-emerald-600" />}
+                {wrong && <X size={18} className="shrink-0 text-red-500" />}
+              </button>
             );
           })}
+          {answered && isRight && (
+            <span className="xp absolute right-2 -top-6 font-black text-amber-500 text-lg pointer-events-none">
+              +10 XP
+            </span>
+          )}
         </div>
+
+        {answered && (
+          <div
+            className={`mt-4 rounded-2xl border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pop ${
+              isRight ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'
+            }`}
+          >
+            <div className="space-y-0.5">
+              <p className={`text-sm font-black inline-flex items-center gap-1.5 ${isRight ? 'text-emerald-700' : 'text-red-700'}`}>
+                {isRight ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
+                {isRight ? t('showcase.correct') : t('showcase.wrong')}
+              </p>
+              <p className="text-sm font-semibold text-slate-700">{d.explicacao}</p>
+            </div>
+            <Btn onClick={advance} className="shrink-0 px-5 py-2.5 text-sm">
+              {i + 1 < showcase.length ? t('showcase.next') : t('showcase.finish')} <ArrowRight size={16} />
+            </Btn>
+          </div>
+        )}
       </div>
     </Card>
+  );
+}
+
+function ProductPreview({ t, lang }: { t: ReturnType<typeof useI18n>['t']; lang: 'pt' | 'en' }) {
+  const [tab, setTab] = useState<'dashboard' | 'ai' | 'flashcards'>('dashboard');
+  const [flipped, setFlipped] = useState(false);
+  const isEn = lang === 'en';
+
+  const tabs = [
+    { id: 'dashboard' as const, label: t('preview.tab.dashboard'), Icon: LayoutDashboard },
+    { id: 'ai' as const, label: t('preview.tab.ai'), Icon: Sparkles },
+    { id: 'flashcards' as const, label: t('preview.tab.flashcards'), Icon: Layers },
+  ];
+
+  const days = isEn ? ['M', 'T', 'W', 'T', 'F', 'S', 'S'] : ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
+
+  return (
+    <section className="max-w-6xl mx-auto px-5 pb-16">
+      <div className="text-center max-w-2xl mx-auto">
+        <p className="text-xs font-black tracking-widest text-indigo-600 uppercase">{t('preview.eyebrow')}</p>
+        <h2 className="text-3xl font-black mt-2">{t('preview.title')}</h2>
+        <p className="text-slate-600 font-semibold mt-2">{t('preview.sub')}</p>
+      </div>
+
+      <div className="mt-7 flex flex-wrap justify-center gap-2" role="tablist">
+        {tabs.map(({ id, label, Icon: TabIcon }) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => {
+              setTab(id);
+              setFlipped(false);
+            }}
+            className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-extrabold border transition cursor-pointer ${
+              tab === id
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
+            }`}
+          >
+            <TabIcon size={16} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <Card className="mt-6 p-0 overflow-hidden border border-slate-200 shadow-[0_20px_50px_-30px_rgba(15,23,42,.45)]">
+        {/* Barra superior estilo app */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+          </div>
+          <span className="text-xs font-bold text-slate-400">educacao-eficiente.vercel.app</span>
+          <span className="text-xs font-extrabold text-indigo-600">OmniLearn</span>
+        </div>
+
+        <div className="p-6 sm:p-8 fade" key={tab}>
+          {tab === 'dashboard' && (
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="rounded-2xl p-5 bg-gradient-to-br from-orange-50 to-amber-50 border border-amber-100">
+                <div className="flex items-center gap-3">
+                  <Icon name="fogo15" size={44} />
+                  <div>
+                    <p className="text-2xl font-black">{isEn ? '15 days' : '15 dias'}</p>
+                    <p className="text-xs font-semibold text-slate-600">{isEn ? 'Active streak' : 'Ofensiva ativa'}</p>
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-1.5">
+                  {days.map((d, idx) => (
+                    <div key={idx} className="flex-1 text-center">
+                      <span className="text-[10px] font-bold text-slate-400">{d}</span>
+                      <div
+                        className={`mt-1 h-7 rounded-lg grid place-items-center text-xs font-black ${
+                          idx < 6 ? 'bg-orange-100 text-orange-600' : 'bg-white text-slate-300'
+                        }`}
+                      >
+                        {idx < 6 ? '✓' : '·'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="md:col-span-2 grid sm:grid-cols-2 gap-4">
+                <div className="rounded-2xl p-5 bg-slate-50 border border-slate-100 flex flex-col justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase">{isEn ? "Today's goal" : 'Meta de hoje'}</p>
+                    <p className="text-xl font-black mt-1">{isEn ? '14 / 18 questions' : '14 / 18 questões'}</p>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    <Bar v={78} />
+                    <p className="text-xs font-semibold text-slate-500">
+                      {isEn ? '4 questions left to keep your streak' : 'Faltam 4 questões para bater a meta'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl p-5 bg-slate-50 border border-slate-100 flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <span className="rounded-xl px-2.5 py-1 text-xs font-bold bg-indigo-100 text-indigo-700">
+                      {isEn ? 'Computer Networks' : 'Redes de Computadores'}
+                    </span>
+                    <span className="text-xs font-black text-emerald-600">88%</span>
+                  </div>
+                  <div className="mt-3">
+                    <p className="font-extrabold">{isEn ? 'TCP/IP & OSI Model' : 'Modelo OSI e TCP/IP'}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{isEn ? '28 AI questions · Studied today' : '28 questões IA · Estudado hoje'}</p>
+                  </div>
+                  <div className="mt-3">
+                    <Bar v={88} color="bg-emerald-500" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tab === 'ai' && (
+            <div className="grid md:grid-cols-3 gap-4 items-stretch">
+              <div className="rounded-2xl p-5 bg-slate-50 border border-slate-100">
+                <span className="w-10 h-10 rounded-xl bg-red-100 text-red-600 grid place-items-center">
+                  <FileText size={20} />
+                </span>
+                <p className="text-xs font-black text-slate-400 mt-3">1. UPLOAD LOCAL</p>
+                <p className="font-extrabold mt-0.5">Aula04_Redes.pdf</p>
+                <p className="text-xs font-semibold text-slate-500 mt-1">
+                  {isEn ? '18 pages · Extracted in your browser (raw PDF never stored)' : '18 páginas · Lido no seu navegador (PDF bruto nunca salvo)'}
+                </p>
+              </div>
+
+              <div className="rounded-2xl p-5 bg-indigo-50 border border-indigo-100">
+                <span className="w-10 h-10 rounded-xl bg-indigo-600 text-white grid place-items-center">
+                  <Sparkles size={20} />
+                </span>
+                <p className="text-xs font-black text-indigo-600 mt-3">2. GROQ · LLAMA 3.3 70B</p>
+                <p className="font-extrabold mt-0.5">{isEn ? '28 adaptive questions' : '28 questões adaptativas'}</p>
+                <p className="text-xs font-semibold text-slate-600 mt-1">
+                  {isEn ? 'Multiple choice, T/F, fill-in-the-blank, match & short answer' : 'Múltipla escolha, V/F, lacunas, associação e resposta curta'}
+                </p>
+              </div>
+
+              <div className="rounded-2xl p-5 bg-emerald-50 border border-emerald-100">
+                <span className="w-10 h-10 rounded-xl bg-emerald-600 text-white grid place-items-center">
+                  <CheckCircle2 size={20} />
+                </span>
+                <p className="text-xs font-black text-emerald-700 mt-3">3. {isEn ? 'READY TO TRAIN' : 'PRONTO PARA TREINAR'}</p>
+                <p className="font-extrabold mt-0.5">{isEn ? 'Summary + Exam Mode' : 'Resumo IA + Modo Prova'}</p>
+                <p className="text-xs font-semibold text-slate-600 mt-1">
+                  {isEn ? 'Instant explanations when you miss + printable PDF exam' : 'Explicação extra quando errar + impressão com gabarito'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {tab === 'flashcards' && (
+            <div className="grid md:grid-cols-2 gap-5 items-stretch">
+              <button
+                type="button"
+                onClick={() => setFlipped((f) => !f)}
+                className="text-left rounded-2xl p-5 bg-indigo-50 border-2 border-indigo-200 hover:border-indigo-400 transition flex flex-col justify-between cursor-pointer"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-black text-indigo-600 uppercase">
+                    {isEn ? 'LEITNER FLASHCARD' : 'FLASHCARD LEITNER'}
+                  </span>
+                  <span className="text-xs font-bold text-indigo-700 bg-white px-2.5 py-1 rounded-full">
+                    {flipped ? t('preview.flipped') : t('preview.flip')}
+                  </span>
+                </div>
+                <div className="my-4">
+                  <p className="text-lg font-extrabold">
+                    {isEn
+                      ? 'What is the main difference between TCP and UDP?'
+                      : 'Qual é a principal diferença entre TCP e UDP?'}
+                  </p>
+                  {flipped && (
+                    <p className="mt-3 text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl p-3 fade">
+                      {isEn
+                        ? 'TCP is connection-oriented and guarantees ordered delivery; UDP is connectionless and faster for real-time traffic.'
+                        : 'TCP é orientado à conexão e garante entrega ordenada; UDP é mais leve e rápido para tráfego em tempo real.'}
+                    </p>
+                  )}
+                </div>
+                <p className="text-xs font-bold text-slate-500">
+                  {isEn ? 'Spaced repetition boxes 1 → 5 (1d, 3d, 7d, 14d, 30d)' : 'Caixas de revisão espaçada 1 → 5 (1d, 3d, 7d, 14d, 30d)'}
+                </p>
+              </button>
+
+              <div className="rounded-2xl p-5 bg-slate-50 border border-slate-100 flex flex-col justify-between">
+                <div className="flex items-center gap-2 font-extrabold">
+                  <BarChart3 size={18} className="text-indigo-600" />
+                  <span>{isEn ? 'Mastery by topic' : 'Domínio por assunto'}</span>
+                </div>
+                <div className="space-y-3 my-4">
+                  {[
+                    { name: isEn ? 'OSI Model' : 'Modelo OSI', pct: 92, tone: 'emerald' as const, bar: 'bg-emerald-500' },
+                    { name: isEn ? 'TCP / UDP Protocols' : 'Protocolos TCP / UDP', pct: 84, tone: 'yellow' as const, bar: 'bg-amber-500' },
+                    { name: isEn ? 'IPv4 Subnetting' : 'Sub-redes IPv4', pct: 58, tone: 'rose' as const, bar: 'bg-rose-500' },
+                  ].map((item) => (
+                    <div key={item.name}>
+                      <div className="flex items-center justify-between text-xs font-bold mb-1">
+                        <span className="inline-flex items-center gap-2">
+                          <StatusDot tone={item.tone} />
+                          {item.name}
+                        </span>
+                        <span>{item.pct}%</span>
+                      </div>
+                      <Bar v={item.pct} color={item.bar} />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs font-semibold text-slate-500">
+                  {isEn ? 'Weak topics are automatically prioritized in your next session.' : 'Tópicos fracos são priorizados automaticamente na próxima sessão.'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+    </section>
   );
 }
 
@@ -216,7 +530,7 @@ export function Landing() {
         </div>
       </header>
 
-      {/* ===== Hero: mascote à esquerda, texto e botões à direita ===== */}
+      {/* ===== Hero ===== */}
       <section className="max-w-6xl mx-auto px-5 pt-4 pb-14 grid md:grid-cols-2 gap-10 md:gap-12 items-center">
         <div className="order-1 fade">
           <button
@@ -264,18 +578,21 @@ export function Landing() {
         </div>
       </section>
 
-      {/* ===== Demonstração interativa ===== */}
+      {/* ===== Mini-quiz interativo de verdade ===== */}
       <section className="max-w-6xl mx-auto px-5 pb-16">
-        <div className="relative perspective">
-          <div className="absolute -top-6 -left-4 hidden sm:block z-10">
+        <div className="relative">
+          <div className="absolute -top-6 -left-4 hidden sm:block z-10 pointer-events-none">
             <FlatIcon name="trophy" size={58} className="floaty" />
           </div>
-          <div className="absolute -bottom-6 -right-2 hidden sm:block z-10">
+          <div className="absolute -bottom-6 -right-2 hidden sm:block z-10 pointer-events-none">
             <FlatIcon name="sparkles" size={52} className="floaty" style={{ animationDelay: '1s' }} />
           </div>
-          <Showcase t={t} lang={lang} />
+          <Showcase t={t} lang={lang} onStart={start} />
         </div>
       </section>
+
+      {/* ===== Prévia real da plataforma ===== */}
+      <ProductPreview t={t} lang={lang} />
 
       {/* ===== Recursos ===== */}
       <section className="max-w-6xl mx-auto px-5 pb-16 grid grid-cols-2 md:grid-cols-4 gap-4">

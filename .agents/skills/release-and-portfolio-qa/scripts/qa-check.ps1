@@ -16,12 +16,22 @@ npm run build | Out-Host
 if ($LASTEXITCODE -eq 0) { Pass "TypeScript check e Vite build concluidos sem erros" }
 else { Fail "Build falhou (exit code $LASTEXITCODE)" }
 
-# 2. Bundle size budget
-$appChunk = Get-ChildItem "$root\dist\assets\pages_app-*.js" -ErrorAction SilentlyContinue | Select-Object -First 1
-if ($appChunk) {
-  $kb = [math]::Round($appChunk.Length / 1KB, 1)
-  if ($kb -le 150) { Pass "Bundle pages_app dentro do orcamento ($kb KB <= 150 KB)" }
-  else { Fail "Bundle pages_app acima do limite ($kb KB > 150 KB) — verifique imports estaticos pesados" }
+# 2. Bundle size budget (nenhum chunk de rota deve exceder 150 KB)
+$heavyRouteChunks = Get-ChildItem "$root\dist\assets\*.js" -ErrorAction SilentlyContinue |
+  Where-Object { $_.Name -notmatch '^(react|pdf|jszip|index)-' -and $_.Length -gt 150KB }
+if ($heavyRouteChunks) {
+  foreach ($chunk in $heavyRouteChunks) {
+    $kb = [math]::Round($chunk.Length / 1KB, 1)
+    Fail "Chunk de rota acima do limite ($($chunk.Name): $kb KB > 150 KB)"
+  }
+} else {
+  $largest = Get-ChildItem "$root\dist\assets\*.js" -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -notmatch '^(react|pdf|jszip|index)-' } |
+    Sort-Object Length -Descending | Select-Object -First 1
+  if ($largest) {
+    $kb = [math]::Round($largest.Length / 1KB, 1)
+    Pass "Todos os chunks de rota dentro do orcamento (maior: $($largest.Name) = $kb KB <= 150 KB)"
+  }
 }
 
 # 3. Heavy image check

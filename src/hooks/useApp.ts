@@ -1,23 +1,23 @@
-import { useAuth } from '../auth';
-import { getProfile } from '../services/profile';
-import { listArchivedSubjects, listSubjects } from '../services/subjects';
-import type { Profile, SubjectWithStats } from '../types';
-import { useAsync } from './useAsync';
+import { useEffect } from 'react';
+import { useAppData } from '../context/AppDataContext';
 
 export function useProfile() {
-  const { session } = useAuth();
-  const userId = session?.user.id;
-  return useAsync<Profile | null>(() => (userId ? getProfile() : Promise.resolve(null)), [userId]);
+  return useAppData().profile;
 }
 
 export function useSubjects() {
-  const { session } = useAuth();
-  const userId = session?.user.id;
-  return useAsync<SubjectWithStats[]>(() => (userId ? listSubjects() : Promise.resolve([])), [userId]);
+  return useAppData().subjects;
 }
 
 export function useArchivedSubjects() {
-  const { session } = useAuth();
-  const userId = session?.user.id;
-  return useAsync<SubjectWithStats[]>(() => (userId ? listArchivedSubjects() : Promise.resolve([])), [userId]);
+  const { archivedSubjects } = useAppData();
+  const { data, loading, reload } = archivedSubjects;
+
+  useEffect(() => {
+    if (data === null && !loading) {
+      void reload();
+    }
+  }, [data, loading, reload]);
+
+  return archivedSubjects;
 }

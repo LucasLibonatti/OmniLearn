@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { AuthProvider, RequireAuth, useAuth } from './auth';
+import { AppDataProvider } from './context/AppDataContext';
 import { SettingsProvider } from './hooks/useSettings';
 import { I18nProvider } from './i18n';
 import { InAppShell } from './ui';
@@ -15,25 +16,22 @@ const Session = lazy(() => import('./Session'));
 const Guidelines = page(() => import('./pages_legal'), 'Guidelines');
 const NotFound = page(() => import('./pages_legal'), 'NotFound');
 const Support = page(() => import('./pages_support'), 'Support');
-const Dashboard = page(() => import('./pages_app'), 'Dashboard');
-const Layout = page(() => import('./pages_app'), 'Layout') as unknown as ComponentType<{ children?: ReactNode }>;
-const Subjects = page(() => import('./pages_app'), 'Subjects');
-const SubjectPage = page(() => import('./pages_app'), 'SubjectPage');
-const NewSubject = page(() => import('./pages_app'), 'NewSubject');
-const Configure = page(() => import('./pages_app'), 'Configure');
-const Result = page(() => import('./pages_app'), 'Result');
-const Review = page(() => import('./pages_app'), 'Review');
-const Stats = page(() => import('./pages_app'), 'Stats');
-const Achievements = page(() => import('./pages_app'), 'Achievements');
-const Profile = page(() => import('./pages_app'), 'Profile');
-const Flashcards = page(() => import('./pages_app'), 'Flashcards');
-const PrintSubject = page(() => import('./pages_app'), 'PrintSubject');
 
-/**
- * Páginas públicas (Diretrizes, Suporte, Redes): para o usuário logado elas aparecem
- * dentro do Layout do app (com sidebar e sessão intacta); para o visitante, seguem
- * como páginas públicas. Isso evita que a navegação "expulse" o usuário logado.
- */
+// Code-splitting por rota (cada tela baixa apenas o próprio bundle)
+const Layout = lazy(() => import('./components/Layout'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Subjects = lazy(() => import('./pages/Subjects'));
+const SubjectPage = lazy(() => import('./pages/SubjectPage'));
+const NewSubject = lazy(() => import('./pages/NewSubject'));
+const Configure = lazy(() => import('./pages/Configure'));
+const Result = lazy(() => import('./pages/Result'));
+const Review = lazy(() => import('./pages/Review'));
+const Stats = lazy(() => import('./pages/Stats'));
+const Achievements = lazy(() => import('./pages/Achievements'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Flashcards = lazy(() => import('./pages/Flashcards'));
+const PrintSubject = lazy(() => import('./pages/PrintSubject'));
+
 function MaybeShell({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth();
   if (loading) return <Spinner />;
@@ -45,55 +43,53 @@ function MaybeShell({ children }: { children: ReactNode }) {
   );
 }
 
-function fallback() {
-  return <Spinner />;
-}
-
 export default function App() {
   return (
     <I18nProvider>
       <SettingsProvider>
         <AuthProvider>
-        <Suspense fallback={fallback()}>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<AuthPage mode="login" />} />
-            <Route path="/cadastro" element={<AuthPage mode="signup" />} />
-            <Route
-              path="/diretrizes"
-              element={
-                <MaybeShell>
-                  <Guidelines />
-                </MaybeShell>
-              }
-            />
-            <Route
-              path="/suporte"
-              element={
-                <MaybeShell>
-                  <Support />
-                </MaybeShell>
-              }
-            />
-            <Route path="/sessao/:id" element={<RequireAuth><Session /></RequireAuth>} />
-            <Route path="/materias/:id/imprimir" element={<RequireAuth><PrintSubject /></RequireAuth>} />
-            <Route element={<RequireAuth><Layout /></RequireAuth>}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/materias" element={<Subjects />} />
-              <Route path="/materias/nova" element={<NewSubject />} />
-              <Route path="/materias/:id" element={<SubjectPage />} />
-              <Route path="/materias/:id/flashcards" element={<Flashcards />} />
-              <Route path="/flashcards" element={<Flashcards />} />
-              <Route path="/sessao/configurar/:subjectId" element={<Configure />} />
-              <Route path="/resultado/:sessionId" element={<Result />} />
-              <Route path="/revisao" element={<Review />} />
-              <Route path="/estatisticas" element={<Stats />} />
-              <Route path="/conquistas" element={<Achievements />} />
-              <Route path="/perfil" element={<Profile />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
+          <AppDataProvider>
+            <Suspense fallback={<Spinner />}>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<AuthPage mode="login" />} />
+                <Route path="/cadastro" element={<AuthPage mode="signup" />} />
+                <Route
+                  path="/diretrizes"
+                  element={
+                    <MaybeShell>
+                      <Guidelines />
+                    </MaybeShell>
+                  }
+                />
+                <Route
+                  path="/suporte"
+                  element={
+                    <MaybeShell>
+                      <Support />
+                    </MaybeShell>
+                  }
+                />
+                <Route path="/sessao/:id" element={<RequireAuth><Session /></RequireAuth>} />
+                <Route path="/materias/:id/imprimir" element={<RequireAuth><PrintSubject /></RequireAuth>} />
+                <Route element={<RequireAuth><Layout /></RequireAuth>}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/materias" element={<Subjects />} />
+                  <Route path="/materias/nova" element={<NewSubject />} />
+                  <Route path="/materias/:id" element={<SubjectPage />} />
+                  <Route path="/materias/:id/flashcards" element={<Flashcards />} />
+                  <Route path="/flashcards" element={<Flashcards />} />
+                  <Route path="/sessao/configurar/:subjectId" element={<Configure />} />
+                  <Route path="/resultado/:sessionId" element={<Result />} />
+                  <Route path="/revisao" element={<Review />} />
+                  <Route path="/estatisticas" element={<Stats />} />
+                  <Route path="/conquistas" element={<Achievements />} />
+                  <Route path="/perfil" element={<Profile />} />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </AppDataProvider>
         </AuthProvider>
       </SettingsProvider>
     </I18nProvider>

@@ -116,16 +116,18 @@ OmniLearn/
 │   ├── dev.ts               # Servidor Node local para desenvolvimento
 │   └── routes/              # profile, subjects, sessions, study, ai e account (LGPD)
 ├── src/
-│   ├── components/          # ConsentGate (LGPD), diálogos e estados de UI
+│   ├── components/          # Layout, SubjectCard, WeekStrip, ConsentGate (LGPD), diálogos e estados
+│   ├── context/             # AppDataContext (cache global sincronizado de Perfil e Matérias)
 │   ├── engine/              # Motor adaptativo e cálculo de XP/nível
 │   ├── hooks/               # useApp, useAsync, useSettings
 │   ├── lib/                 # api.ts, extract.ts (lazy PDF/PPTX), piiCheck.ts, answerMatch.ts
 │   ├── locales/             # Traduções EN (en-core.ts, en-pages.ts)
+│   ├── pages/               # Telas internas modularizadas com code-splitting por rota
 │   ├── services/            # Camada de comunicação com /api/*
-│   ├── App.tsx              # Rotas e lazy-loading de páginas
+│   ├── App.tsx              # Rotas e lazy-loading por página
 │   ├── AuthPage.tsx         # Tela de login e cadastro
 │   ├── Session.tsx          # Executor de sessões e modo prova
-│   └── pages_*.tsx          # Landing, painel interno, suporte e diretrizes LGPD
+│   └── pages_*.tsx          # Landing interativa, suporte e diretrizes LGPD
 ├── .env.example             # Modelo de variáveis de ambiente
 ├── LICENSE                  # Licença MIT
 ├── vercel.json              # Rewrites SPA/API e headers de segurança (CSP/HSTS)
