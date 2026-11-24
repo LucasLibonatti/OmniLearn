@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Upload, Sparkles, Timer, TrendingUp, Sun, Moon, ArrowRight, Check } from 'lucide-react';
 import { Btn, Card, Logo, LangSwitch } from './ui';
 import { mascotSrc } from './icons';
 import { FlatIcon, type FlatIconName } from './brand-icons';
-import { Socials } from './components/Socials';
 import { useSettings } from './hooks/useSettings';
 import { useI18n } from './i18n';
 import type { TKey } from './i18n';
@@ -172,15 +171,27 @@ export function Landing() {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
   const [mood, setMood] = useState<'idle' | 'hop' | 'wiggle'>('idle');
+  const timers = useRef<number[]>([]);
+
+  useEffect(() => {
+    return () => {
+      timers.current.forEach((id) => window.clearTimeout(id));
+    };
+  }, []);
+
+  const schedule = (fn: () => void, ms: number) => {
+    const id = window.setTimeout(fn, ms);
+    timers.current.push(id);
+  };
 
   const play = (m: 'hop' | 'wiggle') => {
     setMood(m);
-    window.setTimeout(() => setMood('idle'), 800);
+    schedule(() => setMood('idle'), 800);
   };
 
   const start = () => {
     play('hop');
-    window.setTimeout(() => navigate('/cadastro'), 260);
+    schedule(() => navigate('/cadastro'), 220);
   };
 
   const mascotClass = mood === 'hop' ? 'hop' : mood === 'wiggle' ? 'wiggle' : 'breathe';
@@ -218,8 +229,11 @@ export function Landing() {
               src={mascotSrc(theme)}
               alt=""
               aria-hidden
+              width={1140}
+              height={578}
+              fetchPriority="high"
               draggable={false}
-              className={`block w-full drop-shadow-[0_22px_40px_rgba(15,23,42,.18)] ${mascotClass}`}
+              className={`block w-full h-auto drop-shadow-[0_22px_40px_rgba(15,23,42,.18)] ${mascotClass}`}
             />
           </button>
         </div>
@@ -304,23 +318,18 @@ export function Landing() {
       </section>
 
       <footer className="border-t border-slate-200/70 py-10">
-        <div className="max-w-6xl mx-auto px-5 flex flex-col items-center gap-5 text-center">
+        <div className="max-w-6xl mx-auto px-5 flex flex-col items-center gap-4 text-center">
           <Logo />
-          <Socials />
           <div className="sm:hidden">
             <LangSwitch />
           </div>
           <p className="text-sm font-semibold text-slate-500">
             {t('footer.tagline')} ·{' '}
-            <Link to="/suporte" className="font-extrabold text-indigo-600">
+            <Link to="/suporte" className="font-extrabold text-indigo-600 hover:underline">
               {t('nav.support')}
             </Link>{' '}
             ·{' '}
-            <Link to="/redes" className="font-extrabold text-indigo-600">
-              {t('nav.socials')}
-            </Link>{' '}
-            ·{' '}
-            <Link to="/diretrizes" className="font-extrabold text-indigo-600">
+            <Link to="/diretrizes" className="font-extrabold text-indigo-600 hover:underline">
               {t('nav.guidelines')}
             </Link>
           </p>

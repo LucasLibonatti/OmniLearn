@@ -177,7 +177,7 @@ export default function Session() {
   };
 
   const next = () => {
-    if (idx + 1 < qs.length) {
+    if (secs > 0 && idx + 1 < qs.length) {
       setIdx(idx + 1);
       reset();
     } else {
@@ -301,7 +301,7 @@ export default function Session() {
                 </div>
               ))}
               {ok === null && (
-                <Btn onClick={() => check(JSON.stringify(mt))} disabled={Object.keys(mt).length < (q.pairs?.length ?? 0)}>
+                <Btn onClick={() => check(JSON.stringify(mt))} disabled={Object.values(mt).filter(Boolean).length < (q.pairs?.length ?? 0)}>
                   {tr('Verificar')}
                 </Btn>
               )}
@@ -315,8 +315,11 @@ export default function Session() {
                 value={txt}
                 disabled={ok !== null}
                 onChange={(e) => setTxt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && ok === null && txt.trim()) void check(txt);
+                }}
                 placeholder={tr('Digite sua resposta')}
-                className="rounded-2xl border-2 border-slate-200 px-4 py-4"
+                className="rounded-2xl border-2 border-slate-200 px-4 py-4 bg-white"
               />
               {ok === null && (
                 <Btn onClick={() => check(txt)} disabled={!txt.trim()}>
@@ -342,7 +345,7 @@ export default function Session() {
           <p className="font-extrabold">{tr('✓ Resposta registrada.')}</p>
           <p className="text-sm text-slate-600 mt-1">{tr('No modo prova você vê o resultado só no final.')}</p>
           <Btn className="w-full mt-4" onClick={next} disabled={closing}>
-            {idx + 1 < qs.length ? tr('Continuar') : closing ? tr('Concluindo…') : tr('Ver resultado')}
+            {secs > 0 && idx + 1 < qs.length ? tr('Continuar') : closing ? tr('Concluindo…') : tr('Ver resultado')}
           </Btn>
         </Card>
       )}
@@ -368,7 +371,6 @@ export default function Session() {
               {explaining ? tr('Pensando…') : tr('Explique de novo')}
             </button>
           )}
-          {/* TAREFA 5: Card de explicação da IA com paleta consistente e alto contraste */}
           {explain && (
             <div className="mt-3 rounded-2xl bg-indigo-50/90 dark:bg-slate-800/90 border border-indigo-200 dark:border-indigo-500/30 p-4">
               <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 mb-1.5 inline-flex items-center gap-1.5">
@@ -383,7 +385,7 @@ export default function Session() {
           {explainErr && <p className="text-sm text-red-500 mt-2">{explainErr}</p>}
 
           <Btn className="w-full mt-4" onClick={next} disabled={closing}>
-            {idx + 1 < qs.length
+            {secs > 0 && idx + 1 < qs.length
               ? ok
                 ? tr('Continuar')
                 : tr('Entendi')

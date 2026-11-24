@@ -17,21 +17,21 @@ import {
   Archive,
   Sun,
   Moon,
-  Volume2,
-  VolumeX,
   Camera,
   ScrollText,
   Printer,
   Share2,
   Layers,
   LifeBuoy,
+  Download,
 } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { Avatar, Btn, Card, Bar, Ring, Logo } from './ui';
 import { EmojiIcon, Icon, flameFor, type IconName } from './icons';
 import { EmptyState, ErrorState, Generating, Skeleton, Spinner } from './components/states';
+import { ConsentGate } from './components/ConsentGate';
 import { confirmDialog } from './components/confirm';
-import { useAuth } from './auth';
+import { CURRENT_TERMS_VERSION, useAuth } from './auth';
 import { useAsync } from './hooks/useAsync';
 import { useSettings } from './hooks/useSettings';
 import { useI18n, type Lang } from './i18n';
@@ -41,32 +41,26 @@ import {
   createSubject,
   deleteSubject,
   getSubject,
-  getSubjectStats,
+  getSubjectDetail,
   listSubjects,
   renameSubject,
   unarchiveSubject,
 } from './services/subjects';
 import { getProfile, updateDailyGoal, updateProfileName, uploadAvatar } from './services/profile';
-import {
-  countMaterials,
-  createTextMaterial,
-  listMaterials,
-  setMaterialError,
-  setMaterialExtracted,
-  uploadMaterial,
-} from './services/materials';
+import { countMaterials, saveMaterial } from './services/materials';
 import { countQuestions, listQuestions } from './services/questions';
 import { gradeFlashcard, reviewQueue, type Flashcard } from './services/flashcards';
 import { summarizeSubject } from './services/ai';
 import { shareText } from './lib/share';
-import { completeSession, getSession, pendingSession, sessionTopicBreakdown, startSession } from './services/sessions';
+import { detectSensitivePii } from './lib/piiCheck';
+import { getSession, pendingSession, sessionTopicBreakdown, startSession } from './services/sessions';
 import { generateQuestions } from './services/generation';
-import { deleteAccount } from './services/account';
+import { deleteAccount, exportMyData } from './services/account';
 import * as statsApi from './services/stats';
 import { listAchievements, newlyUnlocked } from './services/achievements';
 import { formatDate, greeting, lastNDates, shortAgo, todaySP, weekLabel } from './lib/dates';
 import { xpInLevel, XP_PER_LEVEL } from './engine/xp';
-import { extractPdf, extractPptx, extractText, inspectAndExtractFile, MAX_PDF_PAGES, MAX_PPTX_SLIDES } from './lib/extract';
+import { extractText, inspectAndExtractFile, MAX_PDF_PAGES, MAX_PPTX_SLIDES } from './lib/extract';
 import type { Material, SubjectWithStats } from './types';
 
 const navItems = (tr: (s: string, vars?: any) => string) => [
@@ -97,12 +91,21 @@ function Switch({ on, onChange, label }: { on: boolean; onChange: () => void; la
 
 export function Layout({ children }: { children?: ReactNode }) {
   const { tr } = useI18n();
-  const { data: profile } = useProfile();
+  const profileState = useProfile();
+  const profile = profileState.data;
   const { session, signOut } = useAuth();
-  const { theme, sound, reminder, toggleTheme, toggleSound } = useSettings();
+  const { theme, reminder, toggleTheme } = useSettings();
   const loc = useLocation();
-  const today = useAsync(() => (session?.user.id ? statsApi.answeredToday(session.user.id) : Promise.resolve(0)), [session?.user.id]);
+  const today = useAsync(
+    () => (reminder && session?.user.id ? statsApi.answeredToday() : Promise.resolve(0)),
+    [reminder, session?.user.id],
+  );
   const name = profile?.name ?? tr('Estudante');
+  const needsConsent =
+    !profileState.loading &&
+    Boolean(profile) &&
+    profile?.terms_version !== CURRENT_TERMS_VERSION &&
+    loc.pathname !== '/diretrizes';
   const nav = navItems(tr);
   useEffect(() => {
     if (!reminder) return;
@@ -151,13 +154,6 @@ export function Layout({ children }: { children?: ReactNode }) {
             {tr('Suporte')}
           </Link>
           <Link
-            to="/redes"
-            className="flex items-center gap-3 rounded-2xl px-4 py-3 font-medium text-slate-600 hover:bg-slate-50"
-          >
-            <Share2 size={20} />
-            {tr('Redes sociais')}
-          </Link>
-          <Link
             to="/diretrizes"
             className="flex items-center gap-3 rounded-2xl px-4 py-3 font-medium text-slate-600 hover:bg-slate-50"
           >
@@ -192,6 +188,7 @@ export function Layout({ children }: { children?: ReactNode }) {
       <main key={loc.pathname} className="max-w-5xl mx-auto p-5 md:p-10 pb-28 fade">
         {children ?? <Outlet />}
       </main>
+      {needsConsent && <ConsentGate onAccepted={profileState.reload} />}
       <nav aria-label={tr('Mobile')} className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 flex justify-around py-2 z-10">
         {nav.map((n) => (
           <NavLink
@@ -386,10 +383,10 @@ export function Dashboard() {
   const userId = session?.user.id;
   const { data: profile } = useProfile();
   const subjects = useSubjects();
-  const today = useAsync(() => (userId ? statsApi.answeredToday(userId) : Promise.resolve(0)), [userId]);
-  const week = useAsync(() => (userId ? statsApi.studiedDates(userId, 7) : Promise.resolve<string[]>([])), [userId]);
-  const pending = useAsync(() => (userId ? pendingSession(userId) : Promise.resolve(null)), [userId]);
-  const weak = useAsync(() => (userId ? statsApi.weakSpots(userId) : Promise.resolve([])), [userId]);
+  const today = useAsync(() => (userId ? statsApi.answeredToday() : Promise.resolve(0)), [userId]);
+  const week = useAsync(() => (userId ? statsApi.studiedDates(7) : Promise.resolve<string[]>([])), [userId]);
+  const pending = useAsync(() => (userId ? pendingSession() : Promise.resolve(null)), [userId]);
+  const weak = useAsync(() => (userId ? statsApi.weakSpots() : Promise.resolve([])), [userId]);
 
   const name = (profile?.name ?? tr('Estudante')).split(' ')[0];
   const done = today.data ?? 0;
@@ -426,7 +423,7 @@ export function Dashboard() {
           <div className="mt-3">
             <Bar v={Math.min(100, (done / goal) * 100)} />
           </div>
-          <div className="mt-5 flex items-center justify-between gap-3 mt-auto">
+          <div className="mt-auto pt-5 flex items-center justify-between gap-3">
             <p className="text-sm text-slate-500">{breaking ? tr('Não deixe sua sequência quebrar!') : tr('Continue assim!')}</p>
             {pending.data ? (
               <Btn to={`/sessao/${pending.data.id}`}>{tr('Continuar sessão')}</Btn>
@@ -586,14 +583,7 @@ export function SubjectPage() {
 
   const data = useAsync(async () => {
     if (!id) return null;
-    const [subject, questions, materials, stats, topics] = await Promise.all([
-      getSubject(id),
-      countQuestions(id),
-      listMaterials(id),
-      userId ? getSubjectStats(userId, id) : Promise.resolve(null),
-      userId ? statsApi.topicPerformance(userId, id) : Promise.resolve([]),
-    ]);
-    return { subject, questions, materials, stats, topics };
+    return getSubjectDetail(id);
   }, [id, userId]);
 
   const generate = async () => {
@@ -778,6 +768,7 @@ interface SelectedFileInfo {
   file: File;
   status: 'idle' | 'reading' | 'ready' | 'error';
   pageCount?: number;
+  extractedText?: string;
   errorMsg?: string;
 }
 
@@ -794,7 +785,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export function NewSubject() {
-  const { tr } = useI18n();
+  const { t, tr } = useI18n();
   const [params] = useSearchParams();
   const existingId = params.get('subject');
   const nav2 = useNavigate();
@@ -815,7 +806,6 @@ export function NewSubject() {
   const [pasted, setPasted] = useState('');
 
   const subjectId = existingId ?? created;
-  const files = selectedFile?.file ? [selectedFile.file] : [];
 
   const add = async (list: FileList | null) => {
     if (!list || list.length === 0) return;
@@ -831,13 +821,13 @@ export function NewSubject() {
     }
     setStatus('');
     setSelectedFile({ file: f, status: 'reading' });
-    // Valida páginas imediatamente
+    // Valida páginas e extrai texto uma única vez (reaproveitado no envio)
     try {
       const inspection = await inspectAndExtractFile(f);
       if (inspection.error) {
         setSelectedFile({ file: f, status: 'error', errorMsg: inspection.error, pageCount: inspection.pageCount });
       } else {
-        setSelectedFile({ file: f, status: 'ready', pageCount: inspection.pageCount });
+        setSelectedFile({ file: f, status: 'ready', pageCount: inspection.pageCount, extractedText: inspection.text });
       }
     } catch {
       setSelectedFile({ file: f, status: 'ready' });
@@ -861,7 +851,7 @@ export function NewSubject() {
       if (!sid) {
         if (!name.trim()) throw new Error(tr('Dê um nome para a matéria.'));
         setStatus(tr('Criando matéria…'));
-        const s = await createSubject(userId, name.trim(), topic.trim() || null);
+        const s = await createSubject(name.trim(), topic.trim() || null);
         sid = s.id;
         setCreated(s.id);
       }
@@ -872,30 +862,44 @@ export function NewSubject() {
       if (incoming === 0 && already === 0) throw new Error(tr('Envie um arquivo ou cole um texto.'));
 
       if (mode === 'text') {
-        if (pasted.trim().length < 200) throw new Error(tr('Cole um texto maior (pelo menos 200 caracteres).'));
+        const cleanText = pasted.trim();
+        if (cleanText.length < 200) throw new Error(tr('Cole um texto maior (pelo menos 200 caracteres).'));
+        if (detectSensitivePii(cleanText)) {
+          throw new Error(
+            tr('Detectamos possíveis dados sensíveis (CPF ou número de cartão) no conteúdo. Remova essas informações pessoais antes de enviar para a IA.'),
+          );
+        }
         setStatus(tr('Salvando o texto…'));
-        await createTextMaterial(userId, sid, pasted.trim(), name.trim() || tr('Texto colado'));
+        await saveMaterial(sid, {
+          fileName: name.trim() || tr('Texto colado'),
+          pages: 1,
+          extractedText: cleanText,
+        });
       } else {
         if (!selectedFile?.file) throw new Error(tr('Selecione um arquivo.'));
         if (selectedFile.status === 'error') throw new Error(selectedFile.errorMsg || tr('Arquivo inválido.'));
-        setEntries([{ name: selectedFile.file.name, status: 'pending' }]);
         const file = selectedFile.file;
-        updateEntry(0, { status: 'uploading' });
-        const mat = await uploadMaterial(userId, sid, file);
-        updateEntry(0, { status: 'reading' });
-        try {
-          const ex = await extractText(file);
-          if (ex.empty) {
-            await setMaterialError(mat.id, tr('Não conseguimos ler texto suficiente neste arquivo (pode ser escaneado ou só com imagens).'));
-            updateEntry(0, { status: 'error', msg: tr('Sem texto legível') });
-          } else {
-            await setMaterialExtracted(mat.id, ex.pages, ex.text);
-            updateEntry(0, { status: 'ready' });
-          }
-        } catch (err) {
-          await setMaterialError(mat.id, (err as Error).message);
-          updateEntry(0, { status: 'error', msg: (err as Error).message });
+        setEntries([{ name: file.name, status: 'reading' }]);
+        const ex = selectedFile.extractedText
+          ? { text: selectedFile.extractedText, pages: selectedFile.pageCount ?? 1, empty: selectedFile.extractedText.length < 200 }
+          : await extractText(file);
+        if (ex.empty) {
+          updateEntry(0, { status: 'error', msg: tr('Sem texto legível') });
+          throw new Error(tr('Não conseguimos ler texto suficiente neste arquivo (pode ser escaneado ou só com imagens).'));
         }
+        if (detectSensitivePii(ex.text)) {
+          updateEntry(0, { status: 'error', msg: tr('Dados sensíveis detectados') });
+          throw new Error(
+            tr('Detectamos possíveis dados sensíveis (CPF ou número de cartão) no conteúdo. Remova essas informações pessoais antes de enviar para a IA.'),
+          );
+        }
+        updateEntry(0, { status: 'uploading' });
+        await saveMaterial(sid, {
+          fileName: file.name,
+          pages: ex.pages,
+          extractedText: ex.text,
+        });
+        updateEntry(0, { status: 'ready' });
       }
 
       setStatus(tr('Gerando questões com a IA…'));
@@ -958,8 +962,8 @@ export function NewSubject() {
       <div className="mt-3 p-3 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3">
         <span className="shrink-0 text-lg" aria-hidden>⚠️</span>
         <div className="text-sm font-semibold text-amber-800 leading-relaxed">
-          <p className="font-black">{tr('upload.warning.title')}</p>
-          <p>{tr('upload.warning.desc')}</p>
+          <p className="font-black">{t('upload.warning.title')}</p>
+          <p>{t('upload.warning.desc')}</p>
         </div>
       </div>
 
@@ -1189,9 +1193,9 @@ export function Result() {
     const sess = await getSession(sessionId);
     const [topics, profile, week, achievements] = await Promise.all([
       sessionTopicBreakdown(sessionId),
-      userId ? getProfile(userId) : Promise.resolve(null),
-      userId ? statsApi.studiedDates(userId, 7) : Promise.resolve<string[]>([]),
-      userId && sess ? newlyUnlocked(userId, sess.started_at) : Promise.resolve([]),
+      userId ? getProfile() : Promise.resolve(null),
+      userId ? statsApi.studiedDates(7) : Promise.resolve<string[]>([]),
+      userId && sess ? newlyUnlocked(sess.started_at) : Promise.resolve([]),
     ]);
     return { sess, topics, profile, week, achievements };
   }, [sessionId, userId]);
@@ -1272,7 +1276,7 @@ export function Review() {
   const nav2 = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const weak = useAsync(() => (userId ? statsApi.weakSpots(userId) : Promise.resolve([])), [userId]);
+  const weak = useAsync(() => (userId ? statsApi.weakSpots() : Promise.resolve([])), [userId]);
 
   const practice = async (topic: string, subjectId: string) => {
     if (!subjectId) {
@@ -1328,17 +1332,22 @@ export function Stats() {
   const userId = session?.user.id;
   const data = useAsync(async () => {
     if (!userId) return null;
-    const [profile, answered, acc, week, masteryVal, subjectList, perfs, weak] = await Promise.all([
-      getProfile(userId),
-      statsApi.answeredCount(userId),
-      statsApi.accuracy(userId),
-      statsApi.weeklyAccuracy(userId),
-      statsApi.mastery(userId),
-      listSubjects(userId),
-      statsApi.subjectPerformance(userId),
-      statsApi.weakSpots(userId),
+    const [profile, overview, subjectList, weak] = await Promise.all([
+      getProfile(),
+      statsApi.statsOverview(),
+      listSubjects(),
+      statsApi.weakSpots(),
     ]);
-    return { profile, answered, acc, week, masteryVal, subjectList, perfs, weak };
+    return {
+      profile,
+      answered: overview.answered,
+      acc: overview.accuracy,
+      week: overview.weeklyAccuracy,
+      masteryVal: overview.mastery,
+      subjectList,
+      perfs: overview.subjectPerformance,
+      weak,
+    };
   }, [userId]);
 
   if (data.loading) return <Spinner label={tr('Carregando estatísticas…')} />;
@@ -1419,7 +1428,7 @@ export function Stats() {
               </p>
             ))
           ) : (
-            <p className="text-sm text-slate-500 mt-2">Nada aqui. 👏</p>
+            <p className="text-sm text-slate-500 mt-2">{tr('Nada aqui. 👏')}</p>
           )}
         </Card>
       </div>
@@ -1431,7 +1440,7 @@ export function Achievements() {
   const { tr } = useI18n();
   const { session } = useAuth();
   const userId = session?.user.id;
-  const data = useAsync(() => (userId ? listAchievements(userId) : Promise.resolve([])), [userId]);
+  const data = useAsync(() => (userId ? listAchievements() : Promise.resolve([])), [userId]);
 
   return (
     <div>
@@ -1477,29 +1486,25 @@ const LANG_OPTIONS: { value: Lang; label: string }[] = [
 ];
 
 export function Profile() {
-  const { tr } = useI18n();
+  const { lang, setLang, tr } = useI18n();
   const { session, signOut } = useAuth();
   const userId = session?.user.id;
   const profile = useProfile();
   const { theme, sound, reminder, toggleTheme, toggleSound, toggleReminder } = useSettings();
-  const { lang, setLang } = useI18n();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [goalInput, setGoalInput] = useState('');
+  const [goalInput, setGoalInput] = useState<string | null>(null);
   const [savingGoal, setSavingGoal] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   const extra = useAsync(async () => {
     if (!userId) return null;
-    const [answered, acc, subjects] = await Promise.all([
-      statsApi.answeredCount(userId),
-      statsApi.accuracy(userId),
-      listSubjects(userId),
-    ]);
-    return { answered, acc, subjects: subjects.length };
+    const [overview, subjects] = await Promise.all([statsApi.statsOverview(), listSubjects()]);
+    return { answered: overview.answered, acc: overview.accuracy, subjects: subjects.length };
   }, [userId]);
 
   const p = profile.data;
@@ -1515,7 +1520,7 @@ export function Profile() {
     setBusy(true);
     setMsg(null);
     try {
-      await updateProfileName(userId, name.trim());
+      await updateProfileName(name.trim());
       setEditing(false);
       profile.reload();
     } catch (e) {
@@ -1537,7 +1542,7 @@ export function Profile() {
     setUploading(true);
     setMsg(null);
     try {
-      await uploadAvatar(userId, file);
+      await uploadAvatar(file);
       await profile.reload();
     } catch (e) {
       setMsg((e as Error).message);
@@ -1547,7 +1552,7 @@ export function Profile() {
   };
   const saveGoal = async () => {
     if (!userId) return;
-    const n = parseInt(goalInput, 10);
+    const n = parseInt(goalInput ?? String(p?.daily_goal ?? 18), 10);
     if (!n || n < 5 || n > 100) {
       setMsg(tr('Escolha uma meta entre 5 e 100 questões.'));
       return;
@@ -1555,13 +1560,24 @@ export function Profile() {
     setSavingGoal(true);
     setMsg(null);
     try {
-      await updateDailyGoal(userId, n);
+      await updateDailyGoal(n);
       await profile.reload();
-      setGoalInput('');
+      setGoalInput(null);
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
       setSavingGoal(false);
+    }
+  };
+  const downloadData = async () => {
+    setExporting(true);
+    setMsg(null);
+    try {
+      await exportMyData();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setExporting(false);
     }
   };
   const removeAccount = async () => {
@@ -1601,7 +1617,7 @@ export function Profile() {
           <button
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            aria-label="Trocar foto"
+            aria-label={tr('Trocar foto')}
             className="absolute -bottom-1 -right-1 grid place-items-center w-9 h-9 rounded-full bg-indigo-600 text-white shadow hover:bg-indigo-700 disabled:opacity-40"
           >
             <Camera size={17} />
@@ -1707,7 +1723,7 @@ export function Profile() {
                 type="number"
                 min={5}
                 max={100}
-                value={goalInput || String(p?.daily_goal ?? 18)}
+                value={goalInput ?? String(p?.daily_goal ?? 18)}
                 onChange={(e) => setGoalInput(e.target.value)}
                 className="w-20 rounded-xl border border-slate-200 px-3 py-2 text-center"
               />
@@ -1735,17 +1751,8 @@ export function Profile() {
         </div>
         <div className="flex items-center justify-between gap-3 py-3 border-t border-slate-100">
           <div>
-            <p className="font-medium">{tr('Redes sociais')}</p>
-            <p className="text-sm text-slate-500">{tr('Acompanhe as novidades do OmniLearn.')}</p>
-          </div>
-          <Link to="/redes" className="font-semibold text-indigo-600">
-            {tr('Ver')}
-          </Link>
-        </div>
-        <div className="flex items-center justify-between gap-3 py-3 border-t border-slate-100">
-          <div>
             <p className="font-medium">{tr('Diretrizes e termos')}</p>
-            <p className="text-sm text-slate-500">{tr('Um espaço para tirar dúvidas e enviar sugestões.')}</p>
+            <p className="text-sm text-slate-500">{tr('Termos de uso, privacidade e LGPD.')}</p>
           </div>
           <Link to="/diretrizes" className="font-semibold text-indigo-600">{tr('Ver')}</Link>
         </div>
@@ -1769,6 +1776,9 @@ export function Profile() {
           <Share2 size={16} />
           {tr('Compartilhar')}
         </Btn>
+        <Btn v="s" onClick={downloadData} disabled={exporting || busy}>
+          <Download size={16} /> {exporting ? tr('Exportando…') : tr('Baixar meus dados (JSON)')}
+        </Btn>
         <Btn v="s" onClick={removeAccount} disabled={busy}>
           <Trash2 size={16} /> {tr('Excluir minha conta e meus dados')}
         </Btn>
@@ -1787,7 +1797,7 @@ export function Flashcards() {
   const [show, setShow] = useState(false);
   const [result, setResult] = useState<{ box: number; xp_gained: number } | null>(null);
   const [grading, setGrading] = useState(false);
-  const data = useAsync(() => (userId ? reviewQueue(userId, 20, id) : Promise.resolve<Flashcard[]>([])), [userId, id]);
+  const data = useAsync(() => (userId ? reviewQueue(20, id) : Promise.resolve<Flashcard[]>([])), [userId, id]);
   const cards = data.data ?? [];
   const card = cards[idx];
 
@@ -1866,10 +1876,10 @@ export function Flashcards() {
       {show && !result && (
         <div className="flex gap-3">
           <Btn v="s" className="flex-1" onClick={() => grade(false)} disabled={grading}>
-            😅 Errei
+            😅 {tr('Errei')}
           </Btn>
           <Btn className="flex-1" onClick={() => grade(true)} disabled={grading}>
-            😎 Acertei
+            😎 {tr('Acertei')}
           </Btn>
         </div>
       )}
@@ -1934,13 +1944,18 @@ export function PrintSubject() {
               </ul>
             )}
             {q.type === 'match' && q.pairs && (
-              <ul className="mt-2 ml-4 space-y-1">
-                {q.pairs.map(([a, b]) => (
-                  <li key={a}>
-                    {a} → ____________ ({b})
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-2 ml-4 space-y-2">
+                <ul className="space-y-1">
+                  {q.pairs.map(([a]) => (
+                    <li key={a}>
+                      {a} → ______________________________
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-slate-500">
+                  {tr('Opções para relacionar:')} {[...q.pairs.map(([, b]) => b)].sort().join(' · ')}
+                </p>
+              </div>
             )}
             {q.type === 'short' && (
               <div className="mt-2 ml-4">{tr('Resposta')}: ______________________________</div>

@@ -1,19 +1,19 @@
 // Ícones 3D do OmniLearn (https://3dicons.co). As imagens ficam na pasta /Icons na raiz do projeto.
 import type { CSSProperties } from 'react';
-import heroi from '../Icons/Heroi.png';
-import trofeu from '../Icons/Trofeu.png';
-import livro from '../Icons/Livro.png';
-import foguete from '../Icons/foguete.png';
-import raio from '../Icons/raio.png';
-import coroa from '../Icons/3dicons-crown-front-color.png';
-import estrela from '../Icons/3dicons-star-front-premium.png';
-import alvo from '../Icons/Alvo.png';
-import fogo1 from '../Icons/Fogo1Dia.png';
-import fogo15 from '../Icons/Fogo15Dias.png';
-import fogo30 from '../Icons/Fogo30Dias.png';
-import chat from '../Icons/balao de chat.png';
-import mascoteClaro from '../Icons/site inicio/claro.png';
-import mascoteEscuro from '../Icons/site inicio/escuro.png';
+import heroi from '../Icons/Heroi.webp';
+import trofeu from '../Icons/Trofeu.webp';
+import livro from '../Icons/Livro.webp';
+import foguete from '../Icons/foguete.webp';
+import raio from '../Icons/raio.webp';
+import coroa from '../Icons/3dicons-crown-front-color.webp';
+import estrela from '../Icons/3dicons-star-front-premium.webp';
+import alvo from '../Icons/Alvo.webp';
+import fogo1 from '../Icons/Fogo1Dia.webp';
+import fogo15 from '../Icons/Fogo15Dias.webp';
+import fogo30 from '../Icons/Fogo30Dias.webp';
+import chat from '../Icons/balao de chat.webp';
+import mascoteClaro from '../Icons/site inicio/claro.webp';
+import mascoteEscuro from '../Icons/site inicio/escuro.webp';
 
 export const iconSrc = {
   heroi,
@@ -55,6 +55,8 @@ export function Icon({
       alt=""
       aria-hidden
       draggable={false}
+      loading="lazy"
+      decoding="async"
       width={size}
       height={size}
       style={{ width: size, height: size, ...style }}

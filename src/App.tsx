@@ -15,7 +15,6 @@ const Session = lazy(() => import('./Session'));
 const Guidelines = page(() => import('./pages_legal'), 'Guidelines');
 const NotFound = page(() => import('./pages_legal'), 'NotFound');
 const Support = page(() => import('./pages_support'), 'Support');
-const SocialsPage = page(() => import('./pages_support'), 'SocialsPage');
 const Dashboard = page(() => import('./pages_app'), 'Dashboard');
 const Layout = page(() => import('./pages_app'), 'Layout') as unknown as ComponentType<{ children?: ReactNode }>;
 const Subjects = page(() => import('./pages_app'), 'Subjects');
@@ -73,14 +72,6 @@ export default function App() {
               element={
                 <MaybeShell>
                   <Support />
-                </MaybeShell>
-              }
-            />
-            <Route
-              path="/redes"
-              element={
-                <MaybeShell>
-                  <SocialsPage />
                 </MaybeShell>
               }
             />

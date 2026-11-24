@@ -58,27 +58,17 @@ export const EN_CORE: Record<string, string> = {
   // ui.tsx
   'Escolha…': 'Choose…',
 
-  // services/account.ts
-  'Não foi possível excluir sua conta agora.': "We couldn't delete your account right now.",
-  'A função de exclusão ainda não foi publicada no Supabase.':
-    'The deletion function has not been published on Supabase yet.',
-
   // services/ai.ts
   'Não foi possível gerar o resumo agora.': "We couldn't generate the summary right now.",
   'Não foi possível gerar a explicação agora.': "We couldn't generate the explanation right now.",
-  'A função de IA ainda não foi publicada no Supabase.':
-    'The AI function has not been published on Supabase yet.',
-
-  // services/generation.ts
-  'Não foi possível gerar as questões agora. Tente novamente em instantes.':
-    "We couldn't generate the questions right now. Try again in a moment.",
-  'A função de geração ainda não foi publicada no Supabase.':
-    'The generation function has not been published on Supabase yet.',
 
   // services/support.ts
   'Escreva um pouco mais sobre o que você precisa.': 'Write a little more about what you need.',
   'Não foi possível enviar sua mensagem. Tente novamente mais tarde.':
     "We couldn't send your message. Try again later.",
+
+  // lib/api.ts
+  'Não foi possível concluir a operação agora.': "We couldn't complete this action right now.",
 
   // lib/extract.ts
   'Formato não suportado. Envie PDF ou PPTX.': 'Unsupported format. Upload a PDF or PPTX.',

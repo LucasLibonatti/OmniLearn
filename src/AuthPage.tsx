@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Sun, Moon } from 'lucide-react';
-import { supabase } from './lib/supabase';
-import { useAuth } from './auth';
+import { CURRENT_TERMS_VERSION, useAuth } from './auth';
+import { acceptConsent } from './services/profile';
 import { Btn, Card, Logo, LangSwitch } from './ui';
 import { useSettings } from './hooks/useSettings';
 import { useI18n } from './i18n';
@@ -20,7 +20,7 @@ const Field = (p: { label: string; type?: string; value: string; onChange: (v: s
 );
 
 export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
-  const { session, signInWithGoogle } = useAuth();
+  const { session, signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth();
   const { theme, toggleTheme } = useSettings();
   const { t } = useI18n();
   const login = mode === 'login';
@@ -40,7 +40,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
     setBusy(true);
     setMsg('');
     if (login) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await signInWithEmail(email, password);
       if (error) setMsg(t('auth.err.login'));
     } else {
       if (!name.trim()) {
@@ -54,20 +54,12 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
       } else if (!acceptedPrivacy) {
         setMsg(t('auth.err.privacy'));
       } else {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              name: name.trim(),
-              terms_version: '1.0',
-              terms_accepted_at: new Date().toISOString(),
-              privacy_accepted_at: new Date().toISOString(),
-            },
-          },
-        });
-        if (error) setMsg(error.message);
-        else if (!data.session) setMsg(t('auth.done.signup'));
+        const { error } = await signUpWithEmail(name.trim(), email, password);
+        if (error) {
+          setMsg(error);
+        } else {
+          await acceptConsent(CURRENT_TERMS_VERSION).catch(() => undefined);
+        }
       }
     }
     setBusy(false);
@@ -139,7 +131,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
               <span className="btn3d-tx">{login ? t('auth.submit.login') : t('auth.submit.signup')}</span>
             </button>
           </form>
-          <Btn v="s" className="w-full mt-3" onClick={signInWithGoogle}>{t('auth.google')}</Btn>
+          <Btn v="s" className="w-full mt-3" onClick={() => void signInWithGoogle()}>{t('auth.google')}</Btn>
           <p className="mt-6 text-center text-sm font-semibold text-slate-600">
             {login ? (
               <>{t('auth.noAccount')} <Link className="font-extrabold text-indigo-600" to="/cadastro">{t('auth.createAccount')}</Link></>

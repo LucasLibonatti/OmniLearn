@@ -7,7 +7,6 @@ interface SettingsValue {
   sound: boolean;
   reminder: boolean;
   toggleTheme: () => void;
-  setTheme: (t: Theme) => void;
   toggleSound: () => void;
   /** Liga/desliga o lembrete diário. Retorna o novo estado. */
   toggleReminder: () => Promise<boolean>;
@@ -69,7 +68,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     sound,
     reminder,
     toggleTheme: () => setThemeState((t) => (t === 'dark' ? 'light' : 'dark')),
-    setTheme: setThemeState,
     toggleSound: () => setSoundState((s) => !s),
     toggleReminder,
   };

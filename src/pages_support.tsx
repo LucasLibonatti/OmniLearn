@@ -3,10 +3,9 @@ import { Link } from 'react-router-dom';
 import { Send } from 'lucide-react';
 import { Btn, Card, Logo, LangSwitch, useInAppShell } from './ui';
 import { Icon } from './icons';
-import { Socials } from './components/Socials';
 import { sendSupport } from './services/support';
 import { useAuth } from './auth';
-import { useI18n, type TKey } from './i18n';
+import { useI18n } from './i18n';
 
 function Shell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   const { session } = useAuth();
@@ -143,45 +142,13 @@ export function Support() {
         </Card>
       )}
 
-      <Card className="mt-6 text-center">
-        <p className="font-black">{t('support.socials')}</p>
-        <Socials className="mt-4" />
-      </Card>
-
       <p className="text-center text-sm font-semibold text-slate-500 mt-6">
         {t('support.seeGuidelines').replace(t('support.guidelinesLink'), '')}
-        <Link to="/diretrizes" className="font-extrabold text-indigo-600">
+        <Link to="/diretrizes" className="font-extrabold text-indigo-600 hover:underline">
           {t('support.guidelinesLink')}
         </Link>
         .
       </p>
-    </Shell>
-  );
-}
-
-export function SocialsPage() {
-  const { t } = useI18n();
-  const redes: { nome: string; desc: TKey }[] = [
-    { nome: 'Instagram', desc: 'socials.instagram' },
-    { nome: 'TikTok', desc: 'socials.tiktok' },
-    { nome: 'YouTube', desc: 'socials.youtube' },
-    { nome: 'X', desc: 'socials.x' },
-  ];
-  return (
-    <Shell title={t('socials.title')} subtitle={t('socials.sub')}>
-      <div className="grid sm:grid-cols-2 gap-4">
-        {redes.map((r) => (
-          <Card key={r.nome} className="flex items-start gap-3">
-            <Icon name="estrela" size={40} />
-            <div>
-              <p className="font-black">{r.nome}</p>
-              <p className="text-sm font-semibold text-slate-600">{t(r.desc)}</p>
-            </div>
-          </Card>
-        ))}
-      </div>
-      <p className="text-center text-sm font-semibold text-slate-500 mt-6">{t('socials.hint')}</p>
-      <Socials className="mt-4" />
     </Shell>
   );
 }

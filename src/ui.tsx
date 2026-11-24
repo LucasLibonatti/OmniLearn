@@ -4,11 +4,10 @@ import { ChevronDown } from 'lucide-react';
 import { iconSrc } from './icons';
 import { useAuth } from './auth';
 import { useI18n } from './i18n';
-import { useSettings } from './hooks/useSettings';
 
 /**
  * Indica que a página está sendo renderizada dentro do Layout do app (usuário logado),
- * em vez do "shell" público. Páginas como Diretrizes/Suporte/Redes usam isso para
+ * em vez do "shell" público. Páginas como Diretrizes e Suporte usam isso para
  * esconder o cabeçalho público e manter a sidebar.
  */
 export const InAppShell = createContext(false);
@@ -17,7 +16,7 @@ export const useInAppShell = () => useContext(InAppShell);
 export const Card = ({ children, className = '', onClick }: { children: ReactNode; className?: string; onClick?: () => void }) => (
   <div
     onClick={onClick}
-    className={`rounded-3xl bg-white border border-slate-100 shadow-[0_4px_18px_-8px_rgba(15,23,42,0.18)] p-5 card3d ${className}`}
+    className={`rounded-3xl bg-white border border-slate-100 shadow-[0_4px_18px_-8px_rgba(15,23,42,0.14)] p-5 card-surface ${onClick ? 'card-interactive' : ''} ${className}`}
   >
     {children}
   </div>
@@ -160,24 +159,13 @@ export function Select({
   );
 }
 
-export const BrandIcon = ({ size = 44, className = '' }: { size?: number; className?: string }) => (
-  <img
-    src={iconSrc.heroi}
-    alt=""
-    aria-hidden
-    draggable={false}
-    style={{ width: size, height: size }}
-    className={`inline-block object-contain select-none icon3d ${className}`}
-  />
-);
-
 export const Ring = ({ v, size = 150 }: { v: number; size?: number }) => {
   const r = size / 2 - 10;
   const c = 2 * Math.PI * r;
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} stroke="#e2e8f0" strokeWidth="12" fill="none" />
+        <circle cx={size / 2} cy={size / 2} r={r} stroke="currentColor" strokeWidth="12" fill="none" className="text-slate-200 dark:text-slate-700" />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -203,6 +191,9 @@ export const Logo = () => {
       <img
         src={iconSrc.heroi}
         alt="OmniLearn"
+        width={44}
+        height={44}
+        decoding="async"
         draggable={false}
         className="w-11 h-11 object-contain icon3d transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
       />

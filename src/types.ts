@@ -26,6 +26,9 @@ export interface Profile {
   last_study_date: string | null;
   avatar_url: string | null;
   daily_goal: number;
+  terms_version: string | null;
+  terms_accepted_at: string | null;
+  privacy_accepted_at: string | null;
 }
 
 export interface Subject {
@@ -91,13 +94,6 @@ export interface SubjectStats {
 }
 
 export interface SubjectWithStats extends Subject, SubjectStats {}
-
-export interface SessionResult {
-  correct: number;
-  total: number;
-  xp: number;
-  misses: Record<string, number>;
-}
 
 export interface CompleteResult {
   session_correct: number;

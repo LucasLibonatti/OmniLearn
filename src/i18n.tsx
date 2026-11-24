@@ -45,7 +45,6 @@ const pt = {
   'nav.home': 'Página inicial',
   'nav.dashboard': 'Ir para o painel',
   'nav.support': 'Suporte',
-  'nav.socials': 'Redes sociais',
   'nav.guidelines': 'Diretrizes',
   'theme.light': 'Usar tema claro',
   'theme.dark': 'Usar tema escuro',
@@ -63,7 +62,6 @@ const pt = {
   'hero.mascotHint': 'Oi! Clique em mim.',
 
   'showcase.question': 'Questão {n} de {total}',
-  'showcase.try': 'Clique em “Começar agora” para responder de verdade.',
 
   'feats.streak': 'Sequência diária',
   'feats.review': 'Revisão inteligente',
@@ -73,7 +71,7 @@ const pt = {
   'how.title': 'Como funciona',
   'how.step': 'ETAPA {n}',
   'how.1.t': 'Envie seus materiais',
-  'how.1.d': 'Adicione de 1 a 3 slides ou arquivos da matéria.',
+  'how.1.d': 'Envie um PDF, PPTX ou cole o texto da matéria.',
   'how.2.t': 'A IA cria seu treino',
   'how.2.d': 'Seu conteúdo é transformado em perguntas e exercícios.',
   'how.3.t': 'Estude por 15 minutos',
@@ -130,23 +128,14 @@ const pt = {
   'support.message.ph': 'Escreva sua mensagem…',
   'support.sending': 'Enviando…',
   'support.send': 'Enviar mensagem',
-  'support.socials': 'Também estamos nas redes',
   'support.seeGuidelines': 'Veja também as diretrizes.',
   'support.guidelinesLink': 'diretrizes',
 
-  'socials.title': 'Redes sociais',
-  'socials.sub': 'Acompanhe o OmniLearn e fique por dentro das novidades.',
-  'socials.hint': 'Toque em uma rede para seguir — em breve os links estarão ativos.',
-  'socials.instagram': 'Bastidores, dicas de estudo e novidades.',
-  'socials.tiktok': 'Vídeos curtos e truques para estudar melhor.',
-  'socials.youtube': 'Tutoriais e como aproveitar o OmniLearn.',
-  'socials.x': 'Avisos rápidos e atualizações.',
-
   'legal.title': 'Diretrizes e Termos de Uso',
   'legal.updated': 'Última atualização',
-  'legal.today': 'hoje',
+  'legal.today': 'Novembro de 2026',
   'legal.disclaimer':
-    'Este texto é um modelo simplificado e não constitui aconselhamento jurídico. Revise com um profissional antes de usar em produção.',
+    'OmniLearn é um projeto educacional open-source (MIT) em conformidade com os princípios da LGPD.',
   'legal.welcome':
     'Bem-vindo ao OmniLearn. Ao criar uma conta e usar o serviço, você concorda com as regras abaixo. Escrevemos tudo em linguagem simples para facilitar.',
   'legal.h.service': 'Sobre o serviço',
@@ -169,13 +158,13 @@ const pt = {
     'Guardamos apenas o necessário para o funcionamento do serviço: seus dados de conta, os materiais enviados, as questões geradas e seu histórico de respostas. Você pode excluir sua conta a qualquer momento na página de perfil.',
   'legal.h.transfer': 'Transferência internacional e subprocessadores (Art. 33 LGPD)',
   'legal.p.transfer':
-    'Ao usar o OmniLearn, seus dados pessoais e o conteúdo que você envia são processados por **serviços terceiros** localizados fora do Brasil. Os subprocessadores atuais são:\n\n• **Groq Inc. (EUA)** — inferência de IA (modelo Llama 3.3 da Meta) para gerar questões, resumos e explicações.\n• **Supabase Inc. (EUA / Singapura)** — autenticação, banco de dados PostgreSQL, armazenamento de arquivos (Storage) e Edge Functions.\n\n**Base legal para transferência (Art. 33 LGPD):** a transferência baseia-se em **cláusulas contratuais padrão (SCCs)** firmadas com cada subprocessador e no **legítimo interesse** do controlador para viabilizar a prestação do serviço. Ao criar sua conta e enviar materiais, você **consente expressamente** com esta transferência internacional de dados.',
+    'Ao usar o OmniLearn, seus dados pessoais e o conteúdo que você envia são processados por **serviços terceiros** localizados fora do Brasil. Os subprocessadores atuais são:\n\n• **Groq Inc. (EUA)** — inferência de IA (modelo Llama 3.3 da Meta) para gerar questões, resumos e explicações.\n• **Neon Inc. (EUA)** — banco de dados PostgreSQL serverless (dados de conta, matérias, texto extraído e histórico de estudos).\n• **Vercel Inc. (EUA)** — hospedagem web e funções serverless da API.\n• **Google LLC (EUA)** — apenas se você optar por entrar com "Continuar com Google" (OAuth 2.0).\n\n**Minimização de dados (Art. 6º, III LGPD):** seus arquivos PDF e PPTX são lidos localmente no seu navegador — nunca armazenamos o arquivo binário original na nuvem, apenas o texto extraído necessário para gerar as questões.\n\n**Base legal para transferência (Art. 33 LGPD):** a transferência baseia-se em **cláusulas contratuais padrão (SCCs)** firmadas com cada subprocessador e no **consentimento expresso** registrado na sua conta.',
   'legal.h.property': 'Propriedade dos materiais',
   'legal.p.property':
     'Os direitos sobre os arquivos que você envia continuam sendo seus. Ao enviar, você nos autoriza a processá-los apenas para gerar as questões e operar o serviço.',
-  'legal.h.changes': 'Alterações e contato',
+  'legal.h.changes': 'Direitos do titular (Art. 18 LGPD) e contato',
   'legal.p.changes':
-    'Podemos atualizar estas diretrizes de tempos em tempos. Se tiver dúvidas, entre em contato pelo e-mail de suporte do projeto.',
+    'Você pode exportar todos os seus dados em JSON ou excluir permanentemente sua conta e todos os dados associados a qualquer momento na página de **Perfil**. Para dúvidas ou solicitações de privacidade, utilize nossa página de Suporte.',
 
   '404.title': 'Página não encontrada',
   '404.sub': 'O link que você abriu não existe ou foi movido. Confira o endereço ou volte para o início.',
@@ -191,7 +180,6 @@ const en: Record<TKey, string> = {
   'nav.home': 'Home',
   'nav.dashboard': 'Go to dashboard',
   'nav.support': 'Support',
-  'nav.socials': 'Social media',
   'nav.guidelines': 'Guidelines',
   'theme.light': 'Use light theme',
   'theme.dark': 'Use dark theme',
@@ -208,7 +196,6 @@ const en: Record<TKey, string> = {
   'hero.mascotHint': 'Hi! Click on me.',
 
   'showcase.question': 'Question {n} of {total}',
-  'showcase.try': 'Hit “Get started” to answer for real.',
 
   'feats.streak': 'Daily streak',
   'feats.review': 'Smart review',
@@ -218,7 +205,7 @@ const en: Record<TKey, string> = {
   'how.title': 'How it works',
   'how.step': 'STEP {n}',
   'how.1.t': 'Upload your materials',
-  'how.1.d': 'Add 1–3 slides or files from your subject.',
+  'how.1.d': 'Upload a PDF, PPTX or paste your study text.',
   'how.2.t': 'AI builds your workout',
   'how.2.d': 'Your content is turned into questions and exercises.',
   'how.3.t': 'Study for 15 minutes',
@@ -275,23 +262,14 @@ const en: Record<TKey, string> = {
   'support.message.ph': 'Write your message…',
   'support.sending': 'Sending…',
   'support.send': 'Send message',
-  'support.socials': 'You can also find us on social media',
   'support.seeGuidelines': 'Also see the guidelines.',
   'support.guidelinesLink': 'guidelines',
 
-  'socials.title': 'Social media',
-  'socials.sub': 'Follow OmniLearn and stay up to date.',
-  'socials.hint': 'Tap a network to follow — the links will be live soon.',
-  'socials.instagram': 'Behind the scenes, study tips and news.',
-  'socials.tiktok': 'Short videos and tricks to study better.',
-  'socials.youtube': 'Tutorials and how to get the most out of OmniLearn.',
-  'socials.x': 'Quick notices and updates.',
-
   'legal.title': 'Guidelines and Terms of Use',
   'legal.updated': 'Last updated',
-  'legal.today': 'today',
+  'legal.today': 'November 2026',
   'legal.disclaimer':
-    'This text is a simplified template and is not legal advice. Have it reviewed by a professional before using it in production.',
+    'OmniLearn is an open-source educational project (MIT) designed in alignment with LGPD data protection principles.',
   'legal.welcome':
     'Welcome to OmniLearn. By creating an account and using the service you agree to the rules below. We kept everything in plain language.',
   'legal.h.service': 'About the service',
@@ -314,13 +292,13 @@ const en: Record<TKey, string> = {
     'We only store what the service needs: your account data, the materials you upload, the generated questions and your answer history. You can delete your account at any time from the profile page.',
   'legal.h.transfer': 'International transfer and subprocessors (Art. 33 LGPD)',
   'legal.p.transfer':
-    'By using OmniLearn, your personal data and the content you upload are processed by **third-party services** located outside Brazil. Current subprocessors:\n\n• **Groq Inc. (USA)** — AI inference (Meta\'s Llama 3.3 model) to generate questions, summaries and explanations.\n• **Supabase Inc. (USA / Singapore)** — authentication, PostgreSQL database, file storage (Storage) and Edge Functions.\n\n**Legal basis for transfer (Art. 33 LGPD):** the transfer is based on **standard contractual clauses (SCCs)** signed with each subprocessor and on the **legitimate interest** of the controller to provide the service. By creating your account and uploading materials, you **expressly consent** to this international data transfer.',
+    'By using OmniLearn, your personal data and study text are processed by **third-party services** located outside Brazil. Current subprocessors:\n\n• **Groq Inc. (USA)** — AI inference (Meta\'s Llama 3.3 model) to generate questions, summaries and explanations.\n• **Neon Inc. (USA)** — serverless PostgreSQL database (account data, subjects, extracted text and study history).\n• **Vercel Inc. (USA)** — web hosting and serverless API functions.\n• **Google LLC (USA)** — only if you choose to sign in with Google (OAuth 2.0).\n\n**Data minimization (LGPD Art. 6 III):** your PDF and PPTX files are extracted locally in your browser — we never store the raw binary file in the cloud, only the extracted study text needed to generate questions.\n\n**Legal basis for transfer (Art. 33 LGPD):** based on **standard contractual clauses (SCCs)** with each subprocessor and your **explicit consent** recorded on your account.',
   'legal.h.property': 'Ownership of materials',
   'legal.p.property':
     'The rights to the files you upload remain yours. By uploading, you authorize us to process them only to generate questions and operate the service.',
-  'legal.h.changes': 'Changes and contact',
+  'legal.h.changes': 'Data subject rights (LGPD Art. 18) and contact',
   'legal.p.changes':
-    'We may update these guidelines from time to time. If you have questions, reach out through the project support email.',
+    'You can export all of your data as JSON or permanently delete your account and all associated records at any time from your **Profile** page. For privacy questions or requests, please reach out through our Support page.',
 
   '404.title': 'Page not found',
   '404.sub': 'The link you opened does not exist or has moved. Check the address or go back home.',
@@ -334,8 +312,6 @@ interface I18nValue {
   lang: Lang;
   locale: Locale;
   setLang: (l: Lang) => void;
-  /** Troca entre pt e en (usado pelo seletor compacto). */
-  toggleLang: () => void;
   t: (key: TKey, vars?: Record<string, string | number>) => string;
   /** Traduz texto-fonte em PT (para strings do app interno). */
   tr: (pt: string, vars?: Record<string, string | number>) => string;
@@ -358,14 +334,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, [lang]);
 
   const setLang = useCallback((l: Lang) => setLangState(l), []);
-  const toggleLang = useCallback(() => setLangState((v) => (v === 'pt' ? 'en' : 'pt')), []);
 
   const value = useMemo<I18nValue>(
     () => ({
       lang,
       locale: LOCALE[lang],
       setLang,
-      toggleLang,
       t: (key, vars) => {
         const base = DICT[lang][key] ?? key;
         return interpolate(base, vars);
@@ -375,7 +349,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         return interpolate(base, vars);
       },
     }),
-    [lang, setLang, toggleLang],
+    [lang, setLang],
   );
 
   return <I18nCtx.Provider value={value}>{children}</I18nCtx.Provider>;

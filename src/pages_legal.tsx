@@ -47,6 +47,27 @@ function LegalShell({ title, updated, children }: { title: string; updated: stri
 
 const H = ({ children }: { children: React.ReactNode }) => <h2 className="font-black text-lg pt-2">{children}</h2>;
 
+/** Renderiza negrito (**texto**) e quebras de linha com segurança sem expor sintaxe Markdown crua. */
+function RichText({ text }: { text: string }) {
+  return (
+    <>
+      {text.split('\n').map((line, li) => (
+        <span key={li} className={li > 0 ? 'block mt-2' : undefined}>
+          {line.split(/(\*\*[^*]+\*\*)/g).map((part, pi) =>
+            part.startsWith('**') && part.endsWith('**') ? (
+              <strong key={pi} className="font-extrabold text-slate-900">
+                {part.slice(2, -2)}
+              </strong>
+            ) : (
+              part
+            ),
+          )}
+        </span>
+      ))}
+    </>
+  );
+}
+
 export function Guidelines() {
   const { t } = useI18n();
   return (
@@ -57,9 +78,9 @@ export function Guidelines() {
       <p>{t('legal.p.service')}</p>
 
       <H>{t('legal.h.acceptable')}</H>
-      <ul className="list-disc pl-5 space-y-1">
+      <ul className="list-disc pl-5 space-y-1.5">
         <li>{t('legal.li.1')}</li>
-        <li>{t('legal.li.2')}</li>
+        <li><RichText text={t('legal.li.2')} /></li>
         <li>{t('legal.li.3')}</li>
         <li>{t('legal.li.4')}</li>
       </ul>
@@ -68,19 +89,24 @@ export function Guidelines() {
       <p>{t('legal.p.ai')}</p>
 
       <H>{t('legal.h.law')}</H>
-      <p>{t('legal.p.law')}</p>
+      <p><RichText text={t('legal.p.law')} /></p>
 
       <H>{t('legal.h.privacy')}</H>
       <p>{t('legal.p.privacy')}</p>
 
       <H>{t('legal.h.transfer')}</H>
-      <p>{t('legal.p.transfer')}</p>
+      <p><RichText text={t('legal.p.transfer')} /></p>
 
       <H>{t('legal.h.property')}</H>
       <p>{t('legal.p.property')}</p>
 
       <H>{t('legal.h.changes')}</H>
-      <p>{t('legal.p.changes')}</p>
+      <p><RichText text={t('legal.p.changes')} /></p>
+      <p>
+        <Link to="/suporte" className="font-extrabold text-indigo-600 hover:underline">
+          {t('nav.support')} →
+        </Link>
+      </p>
     </LegalShell>
   );
 }

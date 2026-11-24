@@ -1,10 +1,6 @@
 // Extração de texto de PDF e PPTX, feita no navegador (sem enviar o conteúdo a servidores nossos).
-import * as pdfjs from 'pdfjs-dist';
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import JSZip from 'jszip';
+// Bibliotecas pesadas (pdfjs-dist e jszip) são carregadas sob demanda apenas quando o usuário envia um arquivo.
 import { tr } from '../i18n';
-
-pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
 export const MAX_PDF_PAGES = 30;
 export const MAX_PPTX_SLIDES = 40;
@@ -22,6 +18,20 @@ export interface FileInspection {
   error: string | null;
 }
 
+let pdfjsPromise: Promise<typeof import('pdfjs-dist')> | null = null;
+function loadPdfjs() {
+  if (!pdfjsPromise) {
+    pdfjsPromise = Promise.all([
+      import('pdfjs-dist'),
+      import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
+    ]).then(([pdfjs, worker]) => {
+      pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+      return pdfjs;
+    });
+  }
+  return pdfjsPromise;
+}
+
 function clean(raw: string): string {
   return raw
     .replace(/([A-Za-zÀ-ÿ])-\s*\n\s*([a-zà-ÿ])/g, '$1$2')
@@ -31,7 +41,7 @@ function clean(raw: string): string {
 }
 
 export async function extractPdf(file: File): Promise<Extracted> {
-  const data = await file.arrayBuffer();
+  const [pdfjs, data] = await Promise.all([loadPdfjs(), file.arrayBuffer()]);
   const doc = await pdfjs.getDocument({ data }).promise;
   if (doc.numPages > MAX_PDF_PAGES) {
     throw new Error(
@@ -53,7 +63,8 @@ export async function extractPdf(file: File): Promise<Extracted> {
 }
 
 export async function extractPptx(file: File): Promise<Extracted> {
-  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const [{ default: JSZip }, buf] = await Promise.all([import('jszip'), file.arrayBuffer()]);
+  const zip = await JSZip.loadAsync(buf);
   const slides = Object.keys(zip.files)
     .map((name) => {
       const m = name.match(/^ppt\/slides\/slide(\d+)\.xml$/);

@@ -1,8 +1,8 @@
+import { api } from '../lib/api';
 import { tr } from '../i18n';
-import { AI_NOT_PUBLISHED, invokeFunction } from './fn';
 
 async function call(body: Record<string, unknown>, fallback: string): Promise<string> {
-  const data = await invokeFunction<{ text?: string }>('ai-tools', body, fallback, AI_NOT_PUBLISHED());
+  const data = await api<{ text?: string }>('/api/ai/tools', { method: 'POST', body });
   const text = data?.text;
   if (typeof text !== 'string' || !text.trim()) throw new Error(fallback);
   return text.trim();
