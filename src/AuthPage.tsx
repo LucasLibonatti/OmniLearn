@@ -1,10 +1,28 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Sun, Moon } from 'lucide-react';
 import { useAuth } from './auth';
 import { Btn, Card, Logo, LangSwitch } from './ui';
 import { useSettings } from './hooks/useSettings';
 import { useI18n } from './i18n';
+
+const DRAFT_KEY = 'omni-signup-draft';
+
+interface SignupDraft {
+  name?: string;
+  email?: string;
+  acceptedTerms?: boolean;
+  acceptedPrivacy?: boolean;
+}
+
+function loadDraft(): SignupDraft {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    return raw ? (JSON.parse(raw) as SignupDraft) : {};
+  } catch {
+    return {};
+  }
+}
 
 const Field = (p: { label: string; type?: string; value: string; onChange: (v: string) => void }) => (
   <label className="block">
@@ -23,14 +41,28 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
   const { theme, toggleTheme } = useSettings();
   const { t } = useI18n();
   const login = mode === 'login';
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const initial = login ? {} : loadDraft();
+  const [name, setName] = useState(initial.name ?? '');
+  const [email, setEmail] = useState(initial.email ?? '');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(Boolean(initial.acceptedTerms));
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(Boolean(initial.acceptedPrivacy));
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // Salva apenas campos não-sensíveis do cadastro na sessão para não perder preenchimento ao navegar.
+  useEffect(() => {
+    if (login) return;
+    try {
+      sessionStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({ name, email, acceptedTerms, acceptedPrivacy } satisfies SignupDraft),
+      );
+    } catch {
+      /* ignora se sessionStorage estiver bloqueado */
+    }
+  }, [login, name, email, acceptedTerms, acceptedPrivacy]);
 
   if (session) return <Navigate to="/dashboard" replace />;
 
@@ -54,7 +86,15 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
         setMsg(t('auth.err.privacy'));
       } else {
         const { error } = await signUpWithEmail(name.trim(), email, password);
-        if (error) setMsg(error);
+        if (error) {
+          setMsg(error);
+        } else {
+          try {
+            sessionStorage.removeItem(DRAFT_KEY);
+          } catch {
+            /* ignora */
+          }
+        }
       }
     }
     setBusy(false);
@@ -103,7 +143,12 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
                   />
                   <span className="font-semibold text-slate-700">
                     {t('auth.terms.1')}
-                    <Link to="/diretrizes" className="font-extrabold text-indigo-600 underline">
+                    <Link
+                      to="/diretrizes"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-extrabold text-indigo-600 underline"
+                    >
                       {t('auth.terms.2')}
                     </Link>
                     {t('auth.terms.3')}
@@ -119,7 +164,12 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
                   />
                   <span className="font-semibold text-slate-700">
                     {t('auth.privacy.1')}
-                    <Link to="/diretrizes" className="font-extrabold text-indigo-600 underline">
+                    <Link
+                      to="/diretrizes"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-extrabold text-indigo-600 underline"
+                    >
                       {t('auth.privacy.2')}
                     </Link>
                     {t('auth.privacy.3')}

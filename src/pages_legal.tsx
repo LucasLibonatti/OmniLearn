@@ -1,10 +1,22 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Btn, Card, Logo, LangSwitch, useInAppShell } from './ui';
 import { useI18n } from './i18n';
 
 function LegalShell({ title, updated, children }: { title: string; updated: string; children: React.ReactNode }) {
   const { t } = useI18n();
   const inApp = useInAppShell();
+  const navigate = useNavigate();
+
+  const goBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else if (window.opener) {
+      window.close();
+    } else {
+      navigate('/');
+    }
+  };
+
   if (inApp) {
     return (
       <div className="space-y-4">
@@ -25,7 +37,7 @@ function LegalShell({ title, updated, children }: { title: string; updated: stri
         <Logo />
         <div className="flex items-center gap-2">
           <LangSwitch className="hidden sm:inline-flex" />
-          <Btn v="s" to="/">
+          <Btn v="s" onClick={goBack}>
             {t('nav.back')}
           </Btn>
         </div>

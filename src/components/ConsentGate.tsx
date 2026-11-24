@@ -63,7 +63,12 @@ export function ConsentGate({ onAccepted }: { onAccepted: () => void }) {
             />
             <span className="font-semibold text-slate-700">
               {t('auth.terms.1')}
-              <Link to="/diretrizes" className="font-extrabold text-indigo-600 underline">
+              <Link
+                to="/diretrizes"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-extrabold text-indigo-600 underline"
+              >
                 {t('auth.terms.2')}
               </Link>
               {t('auth.terms.3')}
@@ -78,7 +83,12 @@ export function ConsentGate({ onAccepted }: { onAccepted: () => void }) {
             />
             <span className="font-semibold text-slate-700">
               {t('auth.privacy.1')}
-              <Link to="/diretrizes" className="font-extrabold text-indigo-600 underline">
+              <Link
+                to="/diretrizes"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-extrabold text-indigo-600 underline"
+              >
                 {t('auth.privacy.2')}
               </Link>
               {t('auth.privacy.3')}

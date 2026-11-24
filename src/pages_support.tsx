@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Send } from 'lucide-react';
 import { Btn, Card, Logo, LangSwitch, useInAppShell } from './ui';
 import { Icon } from './icons';
@@ -11,7 +11,12 @@ function Shell({ title, subtitle, children }: { title: string; subtitle: string;
   const { session } = useAuth();
   const { t } = useI18n();
   const inApp = useInAppShell();
+  const navigate = useNavigate();
   const back = session ? '/dashboard' : '/';
+  const goBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate(back);
+  };
   if (inApp) {
     return (
       <div className="space-y-6">
@@ -32,7 +37,7 @@ function Shell({ title, subtitle, children }: { title: string; subtitle: string;
         <Logo />
         <div className="flex items-center gap-2">
           <LangSwitch className="hidden sm:inline-flex" />
-          <Btn v="s" to={back}>
+          <Btn v="s" onClick={goBack}>
             {t('nav.back')}
           </Btn>
         </div>
