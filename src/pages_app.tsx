@@ -24,6 +24,7 @@ import {
   Layers,
   LifeBuoy,
   Download,
+  AlertTriangle,
 } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { Avatar, Btn, Card, Bar, Ring, Logo } from './ui';
@@ -804,6 +805,7 @@ export function NewSubject() {
   const [created, setCreated] = useState<string | null>(null);
   const [mode, setMode] = useState<'file' | 'text'>('file');
   const [pasted, setPasted] = useState('');
+  const [showPrivacyInfo, setShowPrivacyInfo] = useState(false);
 
   const subjectId = existingId ?? created;
 
@@ -958,12 +960,37 @@ export function NewSubject() {
         ))}
       </div>
 
-      {/* Aviso proeminente de dados sensíveis proibidos */}
-      <div className="mt-3 p-3 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3">
-        <span className="shrink-0 text-lg" aria-hidden>⚠️</span>
-        <div className="text-sm font-semibold text-amber-800 leading-relaxed">
-          <p className="font-black">{t('upload.warning.title')}</p>
-          <p>{t('upload.warning.desc')}</p>
+      {/* Aviso em camadas (LGPD): curto na superfície + detalhes completos sob "Saiba mais" */}
+      <div className="mt-3 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/30 flex items-start gap-3">
+        <AlertTriangle size={18} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" aria-hidden />
+        <div className="text-sm leading-relaxed text-amber-900 dark:text-amber-100">
+          <p className="font-bold">
+            {t('upload.warning.title')}{' '}
+            <span className="font-medium text-amber-800 dark:text-amber-200/90">
+              — {t('upload.warning.short')}
+            </span>{' '}
+            <button
+              type="button"
+              onClick={() => setShowPrivacyInfo((v) => !v)}
+              aria-expanded={showPrivacyInfo}
+              className="font-extrabold underline decoration-amber-500/70 underline-offset-2 text-amber-900 dark:text-amber-300 hover:opacity-80 cursor-pointer"
+            >
+              {showPrivacyInfo ? t('upload.warning.less') : t('upload.warning.more')}
+            </button>
+          </p>
+          {showPrivacyInfo && (
+            <div className="mt-2 pt-2 border-t border-amber-200/80 dark:border-amber-500/25 text-xs font-medium text-amber-900/90 dark:text-amber-200/90 space-y-1.5 fade">
+              <p>{t('upload.warning.details')}</p>
+              <Link
+                to="/diretrizes"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block font-extrabold underline text-amber-950 dark:text-amber-300"
+              >
+                {t('upload.warning.link')} →
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1059,10 +1086,6 @@ export function NewSubject() {
           className="w-full rounded-3xl border-2 border-slate-200 px-4 py-4 bg-white"
         />
       )}
-
-      <p className="text-xs text-slate-500">
-        {tr('O conteúdo enviado é processado por um serviço de IA para gerar as questões e não deve conter dados pessoais de terceiros.')}
-      </p>
 
       {entries.map((e, i) => (
         <Card key={i} className="flex items-center gap-3 pop">

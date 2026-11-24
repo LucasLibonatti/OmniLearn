@@ -110,8 +110,13 @@ const pt = {
   'auth.privacy.1': 'Li e aceito a ',
   'auth.privacy.2': 'Política de Privacidade',
   'auth.privacy.3': '.',
-  'upload.warning.title': 'PROIBIDO: Dados sensíveis e de terceiros',
-  'upload.warning.desc': 'Não envie CPF, RG, CNH, passaporte, dados de saúde, bancários, biométricos, genéticos, origem racial/étnica, convicção religiosa, opinião política, filiação sindical, vida sexual — nem dados de terceiros sem consentimento, nem material com copyright. O conteúdo vai para IA de terceiros (Groq/Llama 3.3).',
+  'upload.warning.title': 'Envie apenas materiais de estudo',
+  'upload.warning.short': 'Não inclua documentos pessoais (CPF, RG), dados sensíveis ou informações de terceiros.',
+  'upload.warning.more': 'Saiba mais',
+  'upload.warning.less': 'Ocultar detalhes',
+  'upload.warning.details':
+    'O texto extraído é processado por IA de terceiros (Groq / Llama 3.3) para gerar suas questões e resumos — o arquivo PDF/PPTX original não fica salvo na nuvem. É proibido enviar documentos oficiais (CPF, RG, CNH, passaporte), dados de saúde, bancários, biométricos, genéticos, origem racial/étnica, convicção religiosa, opinião política, filiação sindical, vida sexual, dados de terceiros sem consentimento ou material com direitos autorais sem autorização.',
+  'upload.warning.link': 'Ver Diretrizes e Privacidade',
 
   'support.title': 'Suporte',
   'support.sub': 'Precisa de ajuda ou quer dar uma sugestão? Fale com a gente.',
@@ -244,8 +249,13 @@ const en: Record<TKey, string> = {
   'auth.privacy.1': 'I have read and accept the ',
   'auth.privacy.2': 'Privacy Policy',
   'auth.privacy.3': '.',
-  'upload.warning.title': 'FORBIDDEN: Sensitive and third-party data',
-  'upload.warning.desc': 'Do not upload CPF, RG, CNH, passport, health, banking, biometric, genetic data, racial/ethnic origin, religious belief, political opinion, union membership, sex life — nor third-party data without consent, nor copyrighted material. Content is sent to third-party AI (Groq/Llama 3.3).',
+  'upload.warning.title': 'Upload study materials only',
+  'upload.warning.short': 'Do not include personal documents (IDs), sensitive data or third-party information.',
+  'upload.warning.more': 'Learn more',
+  'upload.warning.less': 'Hide details',
+  'upload.warning.details':
+    'Extracted study text is processed by third-party AI (Groq / Llama 3.3) to generate questions and summaries — the raw PDF/PPTX file is never stored in the cloud. Uploading official IDs (CPF, RG, passport), health, banking, biometric, genetic, racial/ethnic, religious, political, union or sex-life data, third-party data without consent, or unauthorized copyrighted material is prohibited.',
+  'upload.warning.link': 'View Guidelines & Privacy',
 
   'support.title': 'Support',
   'support.sub': 'Need help or want to share an idea? Talk to us.',
