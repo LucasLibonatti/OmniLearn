@@ -15,6 +15,7 @@ import { updateDailyGoal, updateProfileName, uploadAvatar } from '../services/pr
 import { deleteAccount, exportMyData } from '../services/account';
 import * as statsApi from '../services/stats';
 import { shareText } from '../lib/share';
+import { playCorrect } from '../lib/sound';
 import { xpInLevel, XP_PER_LEVEL } from '../engine/xp';
 
 function Switch({ on, onChange, label }: { on: boolean; onChange: () => void; label: string }) {
@@ -298,7 +299,15 @@ export default function Profile() {
             <p className="font-medium">{tr('Sons ao responder')}</p>
             <p className="text-sm text-slate-500">{tr('Um "plim" no acerto e um "tadam" no erro.')}</p>
           </div>
-          <Switch on={sound} onChange={toggleSound} label={tr('Sons ao responder')} />
+          <Switch
+            on={sound}
+            onChange={() => {
+              const next = !sound;
+              toggleSound();
+              if (next) playCorrect();
+            }}
+            label={tr('Sons ao responder')}
+          />
         </div>
         <div className="py-3 border-t border-slate-100">
           <div className="flex items-center justify-between gap-3">
