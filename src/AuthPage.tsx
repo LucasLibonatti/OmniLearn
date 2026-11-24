@@ -1,8 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Sun, Moon } from 'lucide-react';
-import { CURRENT_TERMS_VERSION, useAuth } from './auth';
-import { acceptConsent } from './services/profile';
+import { useAuth } from './auth';
 import { Btn, Card, Logo, LangSwitch } from './ui';
 import { useSettings } from './hooks/useSettings';
 import { useI18n } from './i18n';
@@ -55,14 +54,20 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
         setMsg(t('auth.err.privacy'));
       } else {
         const { error } = await signUpWithEmail(name.trim(), email, password);
-        if (error) {
-          setMsg(error);
-        } else {
-          await acceptConsent(CURRENT_TERMS_VERSION).catch(() => undefined);
-        }
+        if (error) setMsg(error);
       }
     }
     setBusy(false);
+  };
+
+  const handleGoogle = async () => {
+    setBusy(true);
+    setMsg('');
+    const { error } = await signInWithGoogle();
+    if (error) {
+      setMsg(error);
+      setBusy(false);
+    }
   };
 
   return (
@@ -131,7 +136,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
               <span className="btn3d-tx">{login ? t('auth.submit.login') : t('auth.submit.signup')}</span>
             </button>
           </form>
-          <Btn v="s" className="w-full mt-3" onClick={() => void signInWithGoogle()}>{t('auth.google')}</Btn>
+          <Btn v="s" className="w-full mt-3" disabled={busy} onClick={() => void handleGoogle()}>{t('auth.google')}</Btn>
           <p className="mt-6 text-center text-sm font-semibold text-slate-600">
             {login ? (
               <>{t('auth.noAccount')} <Link className="font-extrabold text-indigo-600" to="/cadastro">{t('auth.createAccount')}</Link></>

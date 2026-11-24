@@ -1,162 +1,147 @@
 # 🎓 OmniLearn — Educação Eficiente com IA
 
-![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![React](https://img.shields.io/badge/React_18-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS_v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Hono](https://img.shields.io/badge/Hono-E36002?style=for-the-badge&logo=hono&logoColor=white)
+![Neon](https://img.shields.io/badge/Neon_PostgreSQL-00E599?style=for-the-badge&logo=postgresql&logoColor=black)
 ![Groq](https://img.shields.io/badge/Groq_API-F55036?style=for-the-badge&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](./LICENSE)
 
-> **OmniLearn (Educação Eficiente)** é uma plataforma web de aprendizagem assistida por Inteligência Artificial que transforma documentos e conteúdos estáticos em experiências de estudo interativas, personalizadas e gamificadas.
+> **OmniLearn (Educação Eficiente)** é uma plataforma web de aprendizagem gamificada e assistida por Inteligência Artificial que transforma PDFs, slides (PPTX) e anotações em sessões adaptativas de 15 minutos por dia, flashcards com repetição espaçada (Leitner) e resumos gerados sob demanda.
 
 🔗 **Aplicação em Produção (Live Demo):** [https://educacao-eficiente.vercel.app/](https://educacao-eficiente.vercel.app/)
 
-## 🎯 Sobre o Projeto
-
-O estudo tradicional baseado apenas na leitura passiva de documentos e apostilas costuma resultar em baixa retenção de conhecimento e queda rápida de engajamento.
-
-O **OmniLearn** resolve esse problema combinando **inferência de linguagem natural de ultrabaixa latência (Groq API)** com **mecânicas de gamificação**. A plataforma permite que estudantes conversem diretamente com seus materiais de estudo, gerem resumos estruturados, pratiquem com quizzes e flashcards criados sob demanda pela IA e acompanhem sua evolução em tempo real.
+---
 
 ## ✨ Funcionalidades Principais
 
-* 📄 **Tutoria Inteligente Contextualizada:** Análise de materiais e textos para responder dúvidas, simplificar conceitos complexos e extrair tópicos essenciais.
-* 🎮 **Aprendizado Gamificado:** Geração dinâmica de quizzes, flashcards e desafios práticos baseados no conteúdo estudado para estimular a recordação ativa (*active recall*).
-* ⚡ **Respostas em Tempo Real:** Integração com a **Groq API** utilizando o modelo `llama-3.3-70b-versatile`, entregando respostas em frações de segundo (`<500ms`) sem interromper o ritmo de estudo.
-* 🔐 **Autenticação e Persistência Segura:** Gestão de usuários, sessões e histórico de progresso via **Supabase (PostgreSQL)**, com proteção de dados em nível de linha (*Row Level Security - RLS*) e adequação às diretrizes da LGPD.
-* 📱 **Interface Responsiva e Moderna:** Design focado em usabilidade, leitura confortável e navegação fluida tanto em desktop quanto em dispositivos móveis.
+- 📄 **Extração Local no Navegador (Privacidade by Design):** PDFs (até 30 págs) e PPTX (até 40 slides) têm o texto extraído direto no cliente via `pdfjs-dist` e `jszip` carregados sob demanda (*lazy-load*), sem armazenar arquivos binários brutos na nuvem.
+- 🧠 **Geração Adaptativa com IA (Groq / Llama 3.3 70B):** cria 5 formatos de questão (múltipla escolha, verdadeiro/falso, preenchimento, associação e resposta curta com tolerância a erros de digitação via distância de Levenshtein), além de resumos e explicações alternativas.
+- 🎮 **Gamificação & Revisão Espaçada:** sessões adaptativas (modos inteligente, revisão, tópico e prova), sistema de caixas de **Leitner (1–5)** em Flashcards, ofensiva diária (*streak*), XP, níveis, conquistas e impressão com gabarito.
+- 🔐 **Autenticação & Conformidade LGPD:** login por e-mail/senha e Google OAuth via **Better Auth** com cookies `HttpOnly`, *consent gate* versionado para todos os fluxos de entrada, filtro preventivo de dados sensíveis (CPF/cartão), exportação dos dados em JSON (Art. 18, II e V) e exclusão definitiva em cascata (Art. 18, VI).
+- 🌐 **Bilíngue & Acessível:** interface completa em Português (PT-BR) e Inglês (EN), tema claro/escuro e cabeçalhos de segurança rígidos (`CSP`, `HSTS`, `X-Frame-Options`).
 
-## 🛠️ Stack Tecnológica
+---
 
-### Frontend
-* **React + Vite:** Arquitetura de componentes modular com *Hot Module Replacement (HMR)* e bundle otimizado para produção.
-* **TypeScript:** Tipagem estática ponta a ponta para garantir segurança de dados, autocompletar inteligente e manutenibilidade.
-* **Tailwind CSS:** Estilização utilitária para construção rápida de uma interface limpa, consistente e responsiva.
+## 🛠️ Arquitetura & Stack Tecnológica
 
-### Backend (BaaS) & Inteligência Artificial
-* **Supabase:** Banco de dados relacional **PostgreSQL** gerenciado na nuvem, autenticação completa (*Supabase Auth*) e políticas de segurança (*RLS*).
-* **Groq API:** Motor de inferência LPU (*Language Processing Unit*) executando o modelo `llama-3.3-70b-versatile` para geração de trilhas, quizzes e chat pedagógico.
+```mermaid
+flowchart LR
+  Browser["React 18 + Vite + Tailwind v4"] -->|"Cookies HttpOnly /api/*"| API["Vercel Serverless Function (Hono)"]
+  API -->|"Better Auth + SQL + RPCs PL/pgSQL"| Neon[("Neon PostgreSQL Serverless")]
+  API -->|"GROQ_API_KEY (Server-only)"| Groq["Groq API (Llama 3.3 70B)"]
+  Browser -.->|"OAuth 2.0"| Google["Google Auth"]
+```
 
-### Infraestrutura & Deploy
-* **Vercel:** Pipeline de CI/CD automatizado integrado ao GitHub com deploy contínuo a cada push na branch principal.
-* **Git & GitHub:** Versionamento semântico e organização de código.
+- **Frontend:** React 18, TypeScript (strict), Vite 5, Tailwind CSS v4, React Router v6, Lucide Icons, DOMPurify.
+- **Backend Serverless:** **Hono** em um único entrypoint na Vercel (`api/index.ts`), rodando localmente em paralelo ao Vite.
+- **Autenticação:** **Better Auth** (e-mail/senha + Google OAuth) com sessão via cookie `HttpOnly` persistida no PostgreSQL.
+- **Banco de Dados:** **Neon PostgreSQL Serverless** com funções PL/pgSQL atômicas (`start_session`, `record_answer`, `complete_session`, `review_flashcard`) e *scale-to-zero* sem pausas manuais por inatividade.
+- **Inteligência Artificial:** **Groq API** (`llama-3.3-70b-versatile`) executada exclusivamente no servidor, com controle de cota diária por usuário.
 
-## 🧠 Decisões de Arquitetura
-
-1. **Por que Groq API (`llama-3.3-70b-versatile`) na camada de IA?**
-   Em plataformas educacionais gamificadas, a velocidade de resposta da IA impacta diretamente a experiência do usuário. A escolha da Groq permitiu gerar quizzes e feedbacks quase instantâneos, mantendo o estado de foco (*flow*) do estudante.
-2. **Arquitetura Serverless com BaaS (Supabase):**
-   A adoção do Supabase como backend unificado (PostgreSQL + Auth + RLS) elimina a sobrecarga de manter servidores intermediários, garante paridade entre os ambientes de desenvolvimento e produção e reduz a fricção para novos desenvolvedores rodarem o projeto.
-3. **Privacidade by Design (Conformidade LGPD):**
-   Coleta mínima de dados estritamente necessários para a autenticação e histórico de aprendizado, com isolamento total de registros por usuário diretamente nas políticas do banco de dados.
+---
 
 ## 🚀 Como Executar Localmente
 
 ### Pré-requisitos
-* [Node.js 20+](https://nodejs.org/)
-* [Git](https://git-scm.com/)
-* Conta gratuita no [Supabase](https://supabase.com/) e chave de API na [Groq Cloud](https://console.groq.com/)
+- [Node.js 20+](https://nodejs.org/)
+- Banco gratuito no [Neon](https://console.neon.tech/)
+- Chave da [Groq Cloud](https://console.groq.com/)
+- *(Opcional para login Google)* Credenciais OAuth 2.0 no [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
 
-### 1. Clonar o repositório
+### 1. Clonar o repositório e instalar dependências
 
 ```bash
 git clone https://github.com/LucasLibonatti/OmniLearn.git
 cd OmniLearn
+npm install
 ```
 
-### 2. Configurar as Variáveis de Ambiente
+### 2. Criar o banco no Neon
 
-Copie o arquivo de exemplo para criar o seu `.env` local:
+Abra o **SQL Editor** do seu projeto no [Neon Console](https://console.neon.tech/), cole o conteúdo de [`db/schema.sql`](./db/schema.sql) e execute (o script é idempotente e já popula o catálogo de conquistas e as 4 funções PL/pgSQL).
+
+### 3. Configurar as Variáveis de Ambiente
+
+Copie `.env.example` para `.env`:
 
 ```bash
 cp .env.example .env
 ```
 
-Preencha as chaves no arquivo `.env` conforme a tabela abaixo:
+> **Segurança:** nenhuma chave sensível usa prefixo `VITE_`. Todas as credenciais abaixo rodam **exclusivamente no servidor** (Vercel Functions / API local).
 
-| Variável | Obrigatória | Onde Obter | Finalidade |
-| :--- | :---: | :--- | :--- |
-| `VITE_GROQ_API_KEY` | Sim | [Groq Console](https://console.groq.com/) | Inferência de IA (tutoria, quizzes e flashcards) |
-| `VITE_SUPABASE_URL` | Sim | [Supabase Dashboard](https://supabase.com/dashboard) | Endpoint REST/Realtime do banco PostgreSQL |
-| `VITE_SUPABASE_ANON_KEY` | Sim | Supabase (Settings → API) | Chave pública anônima para autenticação e RLS |
+| Variável | Obrigatória | Finalidade |
+| :--- | :---: | :--- |
+| `DATABASE_URL` | Sim | Connection string *pooled* do Neon PostgreSQL (`?sslmode=require`) |
+| `BETTER_AUTH_SECRET` | Sim | Segredo aleatório (32+ caracteres) para assinar sessões do Better Auth |
+| `BETTER_AUTH_URL` | Sim | URL base do app (`http://localhost:5173` em dev / URL da Vercel em produção) |
+| `GROQ_API_KEY` | Sim | Chave da Groq API para geração de questões, resumos e explicações |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Opcional | Habilita "Continuar com Google" (callback: `<BETTER_AUTH_URL>/api/auth/callback/google`) |
 
-Exemplo de arquivo `.env`:
-
-```env
-VITE_GROQ_API_KEY=gsk_sua_chave_aqui
-VITE_SUPABASE_URL=https://seu-projeto.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-### 3. Instalar dependências e iniciar o servidor
+### 4. Iniciar em desenvolvimento
 
 ```bash
-# Instalar pacotes
-npm install
-
-# Iniciar ambiente de desenvolvimento (Vite)
 npm run dev
 ```
 
-A aplicação estará disponível em `http://localhost:5173`.
+Isso inicia simultaneamente a **API Hono** (`http://localhost:3001`) e o **frontend Vite** (`http://localhost:5173`, com proxy automático de `/api`).
 
 ### Scripts Disponíveis
 
 | Comando | Descrição |
 | :--- | :--- |
-| `npm run dev` | Inicia o servidor de desenvolvimento com HMR na porta `5173` |
-| `npm run build` | Compila o TypeScript e gera o build otimizado de produção na pasta `dist/` |
-| `npm run preview` | Executa localmente o build de produção na porta `4173` para validação |
+| `npm run dev` | Inicia API local (`tsx watch`) + Vite HMR em paralelo |
+| `npm run build` | Valida TypeScript (frontend + servidor) e gera o build de produção em `dist/` |
+| `npm run preview` | Executa localmente o build de produção para validação |
+
+---
 
 ## 📂 Estrutura do Projeto
 
 ```text
 OmniLearn/
-├── public/                  # Ativos estáticos públicos
+├── api/                     # Entrypoint serverless da Vercel (Hono)
+├── db/
+│   └── schema.sql           # Schema consolidado PostgreSQL (Neon + Better Auth + RPCs)
+├── Icons/                   # Mascote Prof. Omni e ícones 3D otimizados em WebP
+├── public/                  # Favicon e ativos estáticos
+├── server/
+│   ├── app.ts               # Aplicação Hono e registro de rotas /api/*
+│   ├── auth.ts              # Configuração Better Auth (E-mail + Google OAuth)
+│   ├── db.ts                # Pool PostgreSQL (Neon) e helpers de data SP
+│   ├── dev.ts               # Servidor Node local para desenvolvimento
+│   └── routes/              # profile, subjects, sessions, study, ai e account (LGPD)
 ├── src/
-│   ├── components/          # Componentes reutilizáveis de UI e mecânicas de gamificação
-│   ├── pages/               # Telas e rotas principais da plataforma
-│   ├── services/            # Clientes de integração externa (Supabase e Groq API)
-│   ├── hooks/               # Custom hooks para gestão de estado e sessão de estudo
-│   ├── types/               # Interfaces e contratos de dados em TypeScript
-│   ├── utils/               # Funções auxiliares e formatadores
-│   ├── styles/              # Estilos globais e diretivas do Tailwind CSS
-│   ├── App.tsx              # Componente raiz e configuração de rotas
-│   └── main.tsx             # Ponto de entrada e bootstrap do React
-├── .env.example             # Template de variáveis de ambiente
-├── index.html               # Documento HTML base do Vite
-├── package.json             # Dependências, metadados e scripts npm
-├── tsconfig.json            # Configurações do compilador TypeScript
-├── vite.config.ts           # Configurações de build e plugins do Vite
-└── README.md                # Documentação oficial do projeto
+│   ├── components/          # ConsentGate (LGPD), diálogos e estados de UI
+│   ├── engine/              # Motor adaptativo e cálculo de XP/nível
+│   ├── hooks/               # useApp, useAsync, useSettings
+│   ├── lib/                 # api.ts, extract.ts (lazy PDF/PPTX), piiCheck.ts, answerMatch.ts
+│   ├── locales/             # Traduções EN (en-core.ts, en-pages.ts)
+│   ├── services/            # Camada de comunicação com /api/*
+│   ├── App.tsx              # Rotas e lazy-loading de páginas
+│   ├── AuthPage.tsx         # Tela de login e cadastro
+│   ├── Session.tsx          # Executor de sessões e modo prova
+│   └── pages_*.tsx          # Landing, painel interno, suporte e diretrizes LGPD
+├── .env.example             # Modelo de variáveis de ambiente
+├── LICENSE                  # Licença MIT
+├── vercel.json              # Rewrites SPA/API e headers de segurança (CSP/HSTS)
+└── vite.config.ts           # Configuração Vite + proxy /api
 ```
 
-## 🗺️ Roadmap de Evolução
+---
 
-* [x] Arquitetura frontend responsiva com React, TypeScript e Tailwind CSS
-* [x] Integração com Groq API (`llama-3.3-70b-versatile`) para tutoria e quizzes
-* [x] Autenticação e banco de dados PostgreSQL via Supabase
-* [x] Deploy contínuo em produção na Vercel
-* [ ] Containerização multi-stage com Docker Compose para banco local opcional
-* [ ] Suite de testes automatizados (Vitest e Playwright)
-* [ ] Dashboard analítico com gráficos de retenção e ofensivas (*streaks*)
+## 📄 Licença
 
-## 🤝 Como Contribuir
-
-Contribuições são muito bem-vindas! Se você quiser sugerir melhorias ou corrigir algum bug:
-
-1. Abra uma [Issue](https://github.com/LucasLibonatti/OmniLearn/issues) descrevendo a sua sugestão ou problema encontrado.
-2. Faça um *fork* deste repositório.
-3. Crie uma branch para sua feature: `git checkout -b feat/minha-melhoria`.
-4. Faça o commit das alterações: `git commit -m 'feat: adiciona nova funcionalidade'`.
-5. Envie para o seu repositório: `git push origin feat/minha-melhoria`.
-6. Abra um **Pull Request** detalhando as mudanças realizadas.
+Distribuído sob a licença **MIT**. Consulte o arquivo [`LICENSE`](./LICENSE) para mais detalhes.
 
 ## 👨‍💻 Autor
 
 Desenvolvido por **Lucas Alexander Libonatti**.
 
-* 🐙 **GitHub:** [@LucasLibonatti](https://github.com/LucasLibonatti)
-* 🌐 **Projeto Online:** [OmniLearn na Vercel](https://educacao-eficiente.vercel.app/)
-* 💼 **LinkedIn:** [Lucas Alexander Libonatti](https://www.linkedin.com/)
+- 🐙 **GitHub:** [@LucasLibonatti](https://github.com/LucasLibonatti)
+- 💼 **LinkedIn:** [Lucas Alexander Libonatti](https://linkedin.com/in/lucaslibonatti)
+- 🌐 **Projeto Online:** [OmniLearn na Vercel](https://educacao-eficiente.vercel.app/)

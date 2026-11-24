@@ -29,12 +29,19 @@ function createAuth() {
     database: getPool(),
     baseURL,
     secret: process.env.BETTER_AUTH_SECRET || 'dev-only-secret-change-in-production-32chars',
-    trustedOrigins: [
-      baseURL,
-      'http://localhost:5173',
-      'http://localhost:4173',
-      'https://educacao-eficiente.vercel.app',
-    ].filter(Boolean),
+    trustedOrigins: (request) => {
+      const origins = new Set<string>([
+        baseURL,
+        'http://localhost:5173',
+        'http://localhost:4173',
+        'https://educacao-eficiente.vercel.app',
+      ]);
+      const origin = request?.headers.get('origin');
+      if (origin && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        origins.add(origin);
+      }
+      return [...origins];
+    },
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 6,

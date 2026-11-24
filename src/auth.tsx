@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { createAuthClient } from 'better-auth/react';
+import { acceptConsent } from './services/profile';
 
 export const CURRENT_TERMS_VERSION = '2.0';
 
@@ -22,7 +23,7 @@ interface AuthValue {
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<{ error?: string }>;
   signUpWithEmail: (name: string, email: string, password: string) => Promise<{ error?: string }>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
 }
@@ -51,24 +52,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshSession]);
 
   const signInWithEmail = async (email: string, password: string) => {
-    const res = await authClient.signIn.email({ email, password });
-    if (res.error) return { error: res.error.message || 'E-mail ou senha incorretos.' };
-    await refreshSession();
-    return {};
+    try {
+      const res = await authClient.signIn.email({ email, password });
+      if (res.error) return { error: res.error.message || 'E-mail ou senha incorretos.' };
+      await refreshSession();
+      return {};
+    } catch {
+      return { error: 'Não foi possível conectar ao servidor de autenticação.' };
+    }
   };
 
   const signUpWithEmail = async (name: string, email: string, password: string) => {
-    const res = await authClient.signUp.email({ name, email, password });
-    if (res.error) return { error: res.error.message || 'Não foi possível criar a conta.' };
-    await refreshSession();
-    return {};
+    try {
+      const res = await authClient.signUp.email({ name, email, password });
+      if (res.error) return { error: res.error.message || 'Não foi possível criar a conta.' };
+      await acceptConsent(CURRENT_TERMS_VERSION).catch(() => undefined);
+      await refreshSession();
+      return {};
+    } catch {
+      return { error: 'Não foi possível conectar ao servidor de autenticação.' };
+    }
   };
 
   const signInWithGoogle = async () => {
-    await authClient.signIn.social({
-      provider: 'google',
-      callbackURL: window.location.origin + '/dashboard',
-    });
+    try {
+      const res = await authClient.signIn.social({
+        provider: 'google',
+        callbackURL: window.location.origin + '/dashboard',
+      });
+      if (res?.error) {
+        const code = (res.error as { code?: string }).code;
+        if (code === 'PROVIDER_NOT_FOUND' || res.error.status === 404) {
+          return { error: 'Login com Google ainda não configurado (defina GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no .env).' };
+        }
+        return { error: res.error.message || 'Não foi possível entrar com o Google agora.' };
+      }
+      return {};
+    } catch {
+      return { error: 'Não foi possível iniciar o login com o Google.' };
+    }
   };
 
   const signOut = async () => {
