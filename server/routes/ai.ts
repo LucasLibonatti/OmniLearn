@@ -248,6 +248,9 @@ class GroqError extends Error {
   }
 }
 
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const NVIDIA_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
+
 async function callGroq(opts: {
   systemPrompt: string;
   userPrompt: string;
@@ -257,10 +260,13 @@ async function callGroq(opts: {
   jsonMode?: boolean;
   temperature?: number;
   timeoutMs?: number;
+  /** 'nvidia' usa a NVIDIA NIM (mesmo formato OpenAI). Padrão: Groq. */
+  provider?: 'groq' | 'nvidia';
 }): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 60_000);
   const isGptOss = opts.model.toLowerCase().includes('gpt-oss');
+  const isNvidia = opts.provider === 'nvidia';
 
   const body: Record<string, unknown> = {
     model: opts.model,
@@ -269,9 +275,10 @@ async function callGroq(opts: {
       { role: 'user', content: opts.userPrompt },
     ],
     temperature: opts.temperature ?? 0.3,
-    max_completion_tokens: opts.maxTokens,
   };
-  if (opts.jsonMode) body.response_format = { type: 'json_object' };
+  if (isNvidia) body.max_tokens = opts.maxTokens;
+  else body.max_completion_tokens = opts.maxTokens;
+  if (opts.jsonMode && !isNvidia) body.response_format = { type: 'json_object' };
   if (isGptOss) {
     body.reasoning_effort = 'low';
     body.include_reasoning = false;
@@ -279,7 +286,7 @@ async function callGroq(opts: {
 
   let res: Response;
   try {
-    res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    res = await fetch(isNvidia ? NVIDIA_URL : GROQ_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -303,8 +310,30 @@ async function callGroq(opts: {
   throw new GroqError(502);
 }
 
+/**
+ * Filtro anti-"pergunta sem sentido": a resposta de questões abertas/lacuna
+ * precisa existir de fato no material. Remove alucinações da IA.
+ */
+function isGrounded(q: CleanQuestion, normalizedMaterial: string): boolean {
+  if (q.prompt.length > 400) return false;
+  if (/\b(documento|arquivo|slide|pdf|autor|capa|this document|the file)\b/i.test(q.prompt)) return false;
+  if (q.type === 'short' || q.type === 'fill') {
+    const words = norm(q.answer)
+      .split(' ')
+      .filter((w) => w.length >= 4);
+    if (!words.length) return true;
+    const key = words.sort((a, b) => b.length - a.length)[0];
+    const stem = key.length > 6 ? key.slice(0, key.length - 2) : key;
+    return normalizedMaterial.includes(stem);
+  }
+  return true;
+}
+
 function parseQuestions(raw: string): RawQuestion[] {
-  const cleaned = raw.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+  let cleaned = raw.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+  const first = cleaned.indexOf('{');
+  const last = cleaned.lastIndexOf('}');
+  if (first > 0 && last > first) cleaned = cleaned.slice(first, last + 1);
   try {
     const parsed = JSON.parse(cleaned) as unknown;
     if (Array.isArray(parsed)) return parsed as RawQuestion[];
@@ -335,6 +364,10 @@ aiRoutes.post('/generate-questions', async (c) => {
   const user = c.get('user');
   const GROQ_API_KEY = process.env.GROQ_API_KEY;
   const MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+  const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
+  const NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'meta/llama-3.3-70b-instruct';
+  /** Acima disso (~30 páginas de texto) o material é considerado "PDF grande". */
+  const LARGE_CHARS = Number(process.env.LARGE_PDF_CHARS || '60000');
   const LIMIT = Number(process.env.DAILY_GENERATION_LIMIT || '5');
   const UNLIMITED = new Set(
     (process.env.UNLIMITED_USERS || '')
@@ -410,10 +443,11 @@ aiRoutes.post('/generate-questions', async (c) => {
     const allCleaned: CleanQuestion[] = [];
     const seen = new Set<string>();
 
+    const normalizedMaterial = norm(fullText);
     const addQuestions = (rawQs: RawQuestion[]) => {
       for (const rawQ of rawQs) {
         const q = cleanQuestion(rawQ, lang);
-        if (!q) continue;
+        if (!q || !isGrounded(q, normalizedMaterial)) continue;
         const key = norm(q.prompt);
         if (seen.has(key) || existingPrompts.some((ep) => norm(ep) === key)) continue;
         seen.add(key);
@@ -421,7 +455,9 @@ aiRoutes.post('/generate-questions', async (c) => {
       }
     };
 
-    const CHUNK_MAX = 10_000;
+    // PDFs grandes vão para a NVIDIA NIM (sem a trava de tokens/minuto da Groq grátis).
+    const useNvidia = !!NVIDIA_API_KEY && fullText.length > LARGE_CHARS;
+    const CHUNK_MAX = useNvidia ? 40_000 : 10_000;
     const qty1 = Math.ceil(quantity / 2);
     const qty2 = Math.floor(quantity / 2);
     let chunk1 = sampleSection(fullText, CHUNK_MAX);
@@ -435,25 +471,60 @@ aiRoutes.post('/generate-questions', async (c) => {
       chunk2 = sampleSection(fullText.slice(splitIdx), CHUNK_MAX);
     }
 
-    const raw1 = await callGroq({
-      systemPrompt,
-      userPrompt: buildUserPrompt(subject.name, subject.topic ?? '', chunk1, qty1, lang),
-      key: GROQ_API_KEY,
-      model: MODEL,
-      maxTokens: 3800,
-      jsonMode: true,
-    });
-    addQuestions(parseQuestions(raw1));
+    const runGroq = async (c1: string, c2: string) => {
+      const raw1 = await callGroq({
+        systemPrompt,
+        userPrompt: buildUserPrompt(subject.name, subject.topic ?? '', c1, qty1, lang),
+        key: GROQ_API_KEY,
+        model: MODEL,
+        maxTokens: 3800,
+        jsonMode: true,
+        temperature: 0.2,
+      });
+      addQuestions(parseQuestions(raw1));
+      const raw2 = await callGroq({
+        systemPrompt,
+        userPrompt: buildUserPrompt(subject.name, subject.topic ?? '', c2, qty2, lang, allCleaned.map((q) => q.prompt)),
+        key: GROQ_API_KEY,
+        model: MODEL,
+        maxTokens: 3800,
+        jsonMode: true,
+        temperature: 0.2,
+      });
+      addQuestions(parseQuestions(raw2));
+    };
 
-    const raw2 = await callGroq({
-      systemPrompt,
-      userPrompt: buildUserPrompt(subject.name, subject.topic ?? '', chunk2, qty2, lang, allCleaned.map((q) => q.prompt)),
-      key: GROQ_API_KEY,
-      model: MODEL,
-      maxTokens: 3800,
-      jsonMode: true,
-    });
-    addQuestions(parseQuestions(raw2));
+    if (useNvidia && NVIDIA_API_KEY) {
+      try {
+        // Em paralelo para caber no limite de 60s da Vercel.
+        const [r1, r2] = await Promise.all(
+          [
+            [chunk1, qty1],
+            [chunk2, qty2],
+          ].map(([chunk, qty]) =>
+            callGroq({
+              provider: 'nvidia',
+              systemPrompt,
+              userPrompt: buildUserPrompt(subject.name, subject.topic ?? '', chunk as string, qty as number, lang),
+              key: NVIDIA_API_KEY,
+              model: NVIDIA_MODEL,
+              maxTokens: 6000,
+              temperature: 0.2,
+              timeoutMs: 50_000,
+            }),
+          ),
+        );
+        addQuestions(parseQuestions(r1));
+        addQuestions(parseQuestions(r2));
+      } catch (err) {
+        console.error('NVIDIA falhou, usando Groq como reserva:', err);
+      }
+      if (allCleaned.length < 8) {
+        await runGroq(sampleSection(chunk1, 10_000), sampleSection(chunk2, 10_000));
+      }
+    } else {
+      await runGroq(chunk1, chunk2);
+    }
 
     if (!allCleaned.length) {
       return await fail('A IA não gerou questões válidas para este material. Tente novamente com outro material.', 502);

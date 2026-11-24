@@ -80,6 +80,7 @@ cp .env.example .env
 | `BETTER_AUTH_SECRET` | Sim | Segredo aleatório (32+ caracteres) para assinar sessões do Better Auth |
 | `BETTER_AUTH_URL` | Sim | URL base do app (`http://localhost:5173` em dev / URL da Vercel em produção) |
 | `GROQ_API_KEY` | Sim | Chave da Groq API para geração de questões, resumos e explicações |
+| `NVIDIA_API_KEY` / `NVIDIA_MODEL` | Opcional | NVIDIA NIM usada apenas para PDFs grandes (acima de `LARGE_PDF_CHARS`, padrão 60.000 caracteres), com a Groq como reserva |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Opcional | Habilita "Continuar com Google" (callback: `<BETTER_AUTH_URL>/api/auth/callback/google`) |
 
 ### 4. Iniciar em desenvolvimento
