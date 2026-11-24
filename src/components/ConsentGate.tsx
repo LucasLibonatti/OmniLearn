@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
 import { CURRENT_TERMS_VERSION, useAuth } from '../auth';
 import { acceptConsent } from '../services/profile';
 import { useI18n } from '../i18n';
 import { Btn } from '../ui';
+import { toast } from './Toast';
+
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function ConsentGate({ onAccepted }: { onAccepted: () => void }) {
   const { signOut } = useAuth();
@@ -13,6 +16,26 @@ export function ConsentGate({ onAccepted }: { onAccepted: () => void }) {
   const [privacy, setPrivacy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !boxRef.current) return;
+      const nodes = Array.from(boxRef.current.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (!nodes.length) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 
   const confirm = async () => {
     if (!terms || !privacy || busy) return;
@@ -20,6 +43,7 @@ export function ConsentGate({ onAccepted }: { onAccepted: () => void }) {
     setErr(null);
     try {
       await acceptConsent(CURRENT_TERMS_VERSION);
+      toast.success(tr('Consentimento registrado. Bons estudos!'));
       onAccepted();
     } catch (e) {
       setErr((e as Error).message);
@@ -34,7 +58,7 @@ export function ConsentGate({ onAccepted }: { onAccepted: () => void }) {
       aria-label={tr('Aceite dos Termos e Privacidade')}
       className="fixed inset-0 z-50 grid place-items-center bg-slate-900/60 p-4 backdrop-blur-xs fade"
     >
-      <div className="w-full max-w-md rounded-3xl bg-white border border-slate-100 p-6 shadow-2xl space-y-4">
+      <div ref={boxRef} className="w-full max-w-md rounded-3xl bg-white border border-slate-100 p-6 shadow-2xl space-y-4">
         <div className="flex items-center gap-3">
           <span className="grid place-items-center w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 shrink-0">
             <ShieldCheck size={24} />

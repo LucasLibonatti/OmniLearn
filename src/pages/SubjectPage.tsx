@@ -5,6 +5,7 @@ import DOMPurify from 'dompurify';
 import { Bar, Btn, Card } from '../ui';
 import { Icon } from '../icons';
 import { EmptyState, ErrorState, Generating, Spinner } from '../components/states';
+import { toast } from '../components/Toast';
 import { useAuth } from '../auth';
 import { useAsync } from '../hooks/useAsync';
 import { useAppData } from '../context/AppDataContext';
@@ -41,7 +42,9 @@ export default function SubjectPage() {
     setGenStart(Date.now());
     try {
       const res = await generateQuestions(id);
-      setGenMsg(tr('Pronto! {n} questões geradas.', { n: res.inserted }));
+      const msg = tr('Pronto! {n} questões geradas.', { n: res.inserted });
+      setGenMsg(msg);
+      toast.success(msg);
       data.reload();
       void reloadAllSubjects();
     } catch (e) {
@@ -132,15 +135,16 @@ export default function SubjectPage() {
           </Btn>
           <Btn
             v="s"
-            onClick={() =>
-              shareText(
+            onClick={async () => {
+              const res = await shareText(
                 tr('Estou estudando {topic} no OmniLearn! {n} questões e {pct}% de acerto. 📚', {
                   topic: subject.topic || subject.name,
                   n: questions,
                   pct: stats?.accuracy ?? 0,
                 }),
-              )
-            }
+              );
+              if (res === 'copied') toast.info(tr('Copiado para a área de transferência!'));
+            }}
           >
             <Share2 size={16} />
             {tr('Compartilhar')}

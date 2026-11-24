@@ -79,4 +79,11 @@ export const EN_CORE: Record<string, string> = {
   'Em desenvolvimento': 'Developing',
   'Quase lá': 'Almost there',
   Dominando: 'Mastering',
+
+  // components/ErrorBoundary.tsx
+  'Ops, algo inesperado aconteceu': 'Oops, something unexpected happened',
+  'Seus dados estão seguros. Recarregue a página ou volte para o início para continuar estudando.':
+    'Your data is safe. Reload the page or return to the home screen to keep studying.',
+  'Recarregar página': 'Reload page',
+  'Ir para o início': 'Go to home',
 };

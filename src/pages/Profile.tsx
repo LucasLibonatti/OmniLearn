@@ -4,6 +4,7 @@ import { Camera, Download, Share2, Trash2 } from 'lucide-react';
 import { Avatar, Bar, Btn, Card } from '../ui';
 import { Icon, flameFor } from '../icons';
 import { confirmDialog } from '../components/confirm';
+import { toast } from '../components/Toast';
 import { useAuth } from '../auth';
 import { useAsync } from '../hooks/useAsync';
 import { useProfile, useSubjects } from '../hooks/useApp';
@@ -80,6 +81,7 @@ export default function Profile() {
       await updateProfileName(trimmed);
       patchProfile({ name: trimmed });
       setEditing(false);
+      toast.success(tr('Nome atualizado!'));
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -102,6 +104,7 @@ export default function Profile() {
     try {
       const avatarUrl = await uploadAvatar(file);
       patchProfile({ avatar_url: avatarUrl });
+      toast.success(tr('Foto de perfil atualizada!'));
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -122,6 +125,7 @@ export default function Profile() {
       await updateDailyGoal(n);
       patchProfile({ daily_goal: n });
       setGoalInput(null);
+      toast.success(tr('Meta diária salva!'));
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -134,6 +138,7 @@ export default function Profile() {
     setMsg(null);
     try {
       await exportMyData();
+      toast.success(tr('Seus dados foram exportados em JSON!'));
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -331,15 +336,16 @@ export default function Profile() {
         )}
         <Btn
           v="s"
-          onClick={() =>
-            shareText(
+          onClick={async () => {
+            const res = await shareText(
               tr('Estou usando o OmniLearn! ✨ Sequência de {n} dias, nível {level} e {q} questões respondidas. 🚀', {
                 n: p?.streak ?? 0,
                 level: p?.level ?? 1,
                 q: extra.data?.answered ?? 0,
               }),
-            )
-          }
+            );
+            if (res === 'copied') toast.info(tr('Copiado para a área de transferência!'));
+          }}
         >
           <Share2 size={16} />
           {tr('Compartilhar')}

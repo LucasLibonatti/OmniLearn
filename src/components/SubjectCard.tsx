@@ -4,6 +4,7 @@ import { Archive, Pencil, Trash2 } from 'lucide-react';
 import { Bar, Btn, Card } from '../ui';
 import { Icon, flameFor } from '../icons';
 import { confirmDialog } from './confirm';
+import { toast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAppData } from '../context/AppDataContext';
 import { archiveSubject, deleteSubject, renameSubject, unarchiveSubject } from '../services/subjects';
@@ -44,6 +45,7 @@ export function SubjectCard({
       await renameSubject(s.id, name.trim());
       setEditing(false);
       notify();
+      toast.success(tr('Matéria renomeada!'));
     } finally {
       setBusy(false);
     }
@@ -61,6 +63,7 @@ export function SubjectCard({
     try {
       await archiveSubject(s.id);
       notify();
+      toast.info(tr('Matéria arquivada.'));
     } finally {
       setBusy(false);
     }
@@ -71,6 +74,7 @@ export function SubjectCard({
     try {
       await unarchiveSubject(s.id);
       notify();
+      toast.success(tr('Matéria reativada!'));
     } finally {
       setBusy(false);
     }
@@ -89,6 +93,7 @@ export function SubjectCard({
     try {
       await deleteSubject(s.id);
       notify();
+      toast.info(tr('Matéria excluída.'));
     } finally {
       setBusy(false);
     }

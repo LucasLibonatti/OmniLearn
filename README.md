@@ -95,6 +95,7 @@ Isso inicia simultaneamente a **API Hono** (`http://localhost:3001`) e o **front
 | Comando | Descrição |
 | :--- | :--- |
 | `npm run dev` | Inicia API local (`tsx watch`) + Vite HMR em paralelo |
+| `npm test` | Executa a suíte de testes unitários com **Vitest** (`answerMatch`, `piiCheck`, `dates`, `xp`) |
 | `npm run build` | Valida TypeScript (frontend + servidor) e gera o build de produção em `dist/` |
 | `npm run preview` | Executa localmente o build de produção para validação |
 
@@ -104,6 +105,7 @@ Isso inicia simultaneamente a **API Hono** (`http://localhost:3001`) e o **front
 
 ```text
 OmniLearn/
+├── .github/workflows/       # CI automatizado (Vitest + Typecheck + Vite build)
 ├── api/                     # Entrypoint serverless da Vercel (Hono)
 ├── db/
 │   └── schema.sql           # Schema consolidado PostgreSQL (Neon + Better Auth + RPCs)
@@ -116,7 +118,8 @@ OmniLearn/
 │   ├── dev.ts               # Servidor Node local para desenvolvimento
 │   └── routes/              # profile, subjects, sessions, study, ai e account (LGPD)
 ├── src/
-│   ├── components/          # Layout, SubjectCard, WeekStrip, ConsentGate (LGPD), diálogos e estados
+│   ├── __tests__/           # Testes unitários (Vitest): answerMatch, piiCheck, dates, xp
+│   ├── components/          # Layout, ErrorBoundary, Toast, SubjectCard, WeekStrip, ConsentGate
 │   ├── context/             # AppDataContext (cache global sincronizado de Perfil e Matérias)
 │   ├── engine/              # Motor adaptativo e cálculo de XP/nível
 │   ├── hooks/               # useApp, useAsync, useSettings

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { tr } from '../i18n';
 
@@ -17,19 +17,40 @@ export interface ConfirmOptions {
   danger?: boolean;
 }
 
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 function Dialog({ opts, onResolve }: { opts: ConfirmOptions; onResolve: (v: boolean) => void }) {
   const { title, message, note, confirmLabel, cancelLabel, danger } = opts;
+  const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onResolve(false);
+      if (e.key === 'Escape') {
+        onResolve(false);
+        return;
+      }
+      if (e.key === 'Tab' && boxRef.current) {
+        const focusables = Array.from(boxRef.current.querySelectorAll<HTMLElement>(FOCUSABLE));
+        if (!focusables.length) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     document.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
+    const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
+      document.body.style.overflow = prevOverflow;
+      previouslyFocused?.focus?.();
     };
   }, [onResolve]);
 
@@ -40,6 +61,7 @@ function Dialog({ opts, onResolve }: { opts: ConfirmOptions; onResolve: (v: bool
       className="fixed inset-0 z-[100] grid place-items-center bg-slate-900/50 p-4 fade"
     >
       <div
+        ref={boxRef}
         role="alertdialog"
         aria-modal="true"
         aria-label={title}
@@ -75,8 +97,8 @@ function Dialog({ opts, onResolve }: { opts: ConfirmOptions; onResolve: (v: bool
 }
 
 /**
- * Substituto interno do `window.confirm`: mostra um diálogo no próprio app
- * (com o tema, idioma e estilo do OmniLearn) e devolve uma Promise<boolean>.
+ * Substituto interno do `window.confirm`: mostra um diálogo acessível com focus trap
+ * e devolve uma Promise<boolean>.
  */
 export function confirmDialog(opts: ConfirmOptions): Promise<boolean> {
   return new Promise((resolve) => {

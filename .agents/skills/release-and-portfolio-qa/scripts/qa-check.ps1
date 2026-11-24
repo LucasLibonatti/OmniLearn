@@ -11,7 +11,12 @@ function Fail($msg) { $script:fails++; Write-Host "[FAIL] $msg" -ForegroundColor
 
 Write-Host "`n=== OmniLearn Release & Portfolio QA ===" -ForegroundColor Cyan
 
-# 1. TypeScript + Vite build
+# 1. Unit tests (Vitest)
+npm test | Out-Host
+if ($LASTEXITCODE -eq 0) { Pass "Testes unitarios (Vitest) passaram" }
+else { Fail "Testes unitarios falharam (exit code $LASTEXITCODE)" }
+
+# 2. TypeScript + Vite build
 npm run build | Out-Host
 if ($LASTEXITCODE -eq 0) { Pass "TypeScript check e Vite build concluidos sem erros" }
 else { Fail "Build falhou (exit code $LASTEXITCODE)" }

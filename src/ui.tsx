@@ -88,15 +88,41 @@ export function Select({
   const { tr } = useI18n();
   const ph = placeholder ?? tr('Escolha…');
   const [open, setOpen] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(-1);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const allItems = ['', ...options];
 
   useEffect(() => {
     if (!open) return;
+    setActiveIdx(Math.max(0, allItems.indexOf(value)));
     const onDoc = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActiveIdx((i) => (i + 1) % allItems.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActiveIdx((i) => (i - 1 + allItems.length) % allItems.length);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        setActiveIdx(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        setActiveIdx(allItems.length - 1);
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        if (activeIdx >= 0 && activeIdx < allItems.length) {
+          e.preventDefault();
+          onChange(allItems[activeIdx]);
+          setOpen(false);
+          triggerRef.current?.focus();
+        }
+      }
     };
     document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onKey);
@@ -104,16 +130,18 @@ export function Select({
       document.removeEventListener('mousedown', onDoc);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [open, activeIdx, allItems.length]);
 
   const choose = (v: string) => {
     onChange(v);
     setOpen(false);
+    triggerRef.current?.focus();
   };
 
   return (
     <div ref={ref} className={`relative ${className}`}>
       <button
+        ref={triggerRef}
         type="button"
         aria-label={ariaLabel}
         aria-haspopup="listbox"
@@ -131,25 +159,22 @@ export function Select({
           role="listbox"
           className="absolute z-30 mt-2 w-full max-h-60 overflow-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10"
         >
-          <li role="option" aria-selected={value === ''}>
-            <button
-              type="button"
-              onClick={() => choose('')}
-              className={`w-full text-left rounded-lg px-3 py-2.5 text-sm text-slate-400 transition hover:bg-slate-100 ${value === '' ? 'bg-slate-100' : ''}`}
-            >
-              {ph}
-            </button>
-          </li>
-          {options.map((o) => (
-            <li key={o} role="option" aria-selected={value === o}>
+          {allItems.map((o, idx) => (
+            <li key={o || '__placeholder'} role="option" aria-selected={value === o}>
               <button
                 type="button"
                 onClick={() => choose(o)}
-                className={`w-full text-left rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                  value === o ? 'bg-indigo-600 text-white' : 'text-slate-700 hover:bg-slate-100'
+                className={`w-full text-left rounded-lg px-3 py-2.5 text-sm transition ${
+                  o === '' ? 'text-slate-400' : 'font-medium'
+                } ${
+                  value === o
+                    ? 'bg-indigo-600 text-white'
+                    : idx === activeIdx
+                      ? 'bg-indigo-50 text-indigo-700'
+                      : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
-                {o}
+                {o || ph}
               </button>
             </li>
           ))}
