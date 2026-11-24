@@ -53,6 +53,8 @@ function loadPdfjs() {
 
 function clean(raw: string): string {
   return raw
+    .replace(/\u0000/g, '')
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
     .replace(/([A-Za-zÀ-ÿ])-\s*\n\s*([a-zà-ÿ])/g, '$1$2')
     .replace(/[ \t\u00a0]+/g, ' ')
     .replace(/\n{3,}/g, '\n\n')

@@ -251,6 +251,13 @@ class GroqError extends Error {
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const NVIDIA_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
+/** Remove bytes nulos, controles inválidos e surrogates UTF-16 órfãos de textos extraídos de PDFs. */
+function sanitizeForApi(s: string): string {
+  return s
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, ' ')
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '');
+}
+
 async function callGroq(opts: {
   systemPrompt: string;
   userPrompt: string;
@@ -264,15 +271,16 @@ async function callGroq(opts: {
   provider?: 'groq' | 'nvidia';
 }): Promise<string> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 60_000);
+  const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 45_000);
   const isGptOss = opts.model.toLowerCase().includes('gpt-oss');
   const isNvidia = opts.provider === 'nvidia';
+  const providerLabel = isNvidia ? 'NVIDIA' : 'Groq';
 
   const body: Record<string, unknown> = {
     model: opts.model,
     messages: [
-      { role: 'system', content: opts.systemPrompt },
-      { role: 'user', content: opts.userPrompt },
+      { role: 'system', content: sanitizeForApi(opts.systemPrompt) },
+      { role: 'user', content: sanitizeForApi(opts.userPrompt) },
     ],
     temperature: opts.temperature ?? 0.3,
   };
@@ -295,13 +303,24 @@ async function callGroq(opts: {
       body: JSON.stringify(body),
       signal: controller.signal,
     });
+  } catch (err) {
+    if ((err as Error)?.name === 'AbortError') {
+      console.error(`${providerLabel} timeout após ${opts.timeoutMs ?? 45_000}ms`);
+      throw new GroqError(408);
+    }
+    throw err;
   } finally {
     clearTimeout(timer);
   }
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
-    console.error(`Groq error ${res.status}:`, errText.slice(0, 500));
+    console.error(`${providerLabel} error ${res.status}:`, errText.slice(0, 500));
+    // Groq frequentemente retorna 400 (json_validate_failed) em PDFs densos quando jsonMode está ligado.
+    // Reexecuta 1 vez sem response_format e deixa parseQuestions extrair o JSON.
+    if (!isNvidia && res.status === 400 && opts.jsonMode) {
+      return callGroq({ ...opts, jsonMode: false });
+    }
     throw new GroqError(res.status);
   }
   const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
@@ -457,7 +476,7 @@ aiRoutes.post('/generate-questions', async (c) => {
 
     // PDFs grandes vão para a NVIDIA NIM (sem a trava de tokens/minuto da Groq grátis).
     const useNvidia = !!NVIDIA_API_KEY && fullText.length > LARGE_CHARS;
-    const CHUNK_MAX = useNvidia ? 40_000 : 10_000;
+    const CHUNK_MAX = useNvidia ? 32_000 : 8_000;
     const qty1 = Math.ceil(quantity / 2);
     const qty2 = Math.floor(quantity / 2);
     let chunk1 = sampleSection(fullText, CHUNK_MAX);
@@ -472,32 +491,49 @@ aiRoutes.post('/generate-questions', async (c) => {
     }
 
     const runGroq = async (c1: string, c2: string) => {
-      const raw1 = await callGroq({
-        systemPrompt,
-        userPrompt: buildUserPrompt(subject.name, subject.topic ?? '', c1, qty1, lang),
-        key: GROQ_API_KEY,
-        model: MODEL,
-        maxTokens: 3800,
-        jsonMode: true,
-        temperature: 0.2,
-      });
-      addQuestions(parseQuestions(raw1));
-      const raw2 = await callGroq({
-        systemPrompt,
-        userPrompt: buildUserPrompt(subject.name, subject.topic ?? '', c2, qty2, lang, allCleaned.map((q) => q.prompt)),
-        key: GROQ_API_KEY,
-        model: MODEL,
-        maxTokens: 3800,
-        jsonMode: true,
-        temperature: 0.2,
-      });
-      addQuestions(parseQuestions(raw2));
+      let lastErr: unknown = null;
+      try {
+        const raw1 = await callGroq({
+          systemPrompt,
+          userPrompt: buildUserPrompt(subject.name, subject.topic ?? '', c1, qty1, lang),
+          key: GROQ_API_KEY,
+          model: MODEL,
+          maxTokens: 3800,
+          jsonMode: true,
+          temperature: 0.2,
+          timeoutMs: 25_000,
+        });
+        addQuestions(parseQuestions(raw1));
+      } catch (err) {
+        lastErr = err;
+        console.error('Groq lote 1 falhou:', err);
+      }
+
+      try {
+        const raw2 = await callGroq({
+          systemPrompt,
+          userPrompt: buildUserPrompt(subject.name, subject.topic ?? '', c2, qty2, lang, allCleaned.map((q) => q.prompt)),
+          key: GROQ_API_KEY,
+          model: MODEL,
+          maxTokens: 3800,
+          jsonMode: true,
+          temperature: 0.2,
+          timeoutMs: 25_000,
+        });
+        addQuestions(parseQuestions(raw2));
+      } catch (err) {
+        lastErr = err;
+        console.error('Groq lote 2 falhou:', err);
+      }
+
+      // Só propaga o erro se NENHUM lote gerou questões válidas.
+      if (!allCleaned.length && lastErr) throw lastErr;
     };
 
     if (useNvidia && NVIDIA_API_KEY) {
       try {
-        // Em paralelo para caber no limite de 60s da Vercel.
-        const [r1, r2] = await Promise.all(
+        // Em paralelo para caber no limite de 60s da Vercel; usa allSettled para aproveitar se 1 lote passar.
+        const results = await Promise.allSettled(
           [
             [chunk1, qty1],
             [chunk2, qty2],
@@ -508,19 +544,21 @@ aiRoutes.post('/generate-questions', async (c) => {
               userPrompt: buildUserPrompt(subject.name, subject.topic ?? '', chunk as string, qty as number, lang),
               key: NVIDIA_API_KEY,
               model: NVIDIA_MODEL,
-              maxTokens: 6000,
+              maxTokens: 5000,
               temperature: 0.2,
-              timeoutMs: 50_000,
+              timeoutMs: 35_000,
             }),
           ),
         );
-        addQuestions(parseQuestions(r1));
-        addQuestions(parseQuestions(r2));
+        for (const r of results) {
+          if (r.status === 'fulfilled') addQuestions(parseQuestions(r.value));
+          else console.error('NVIDIA lote falhou:', r.reason);
+        }
       } catch (err) {
         console.error('NVIDIA falhou, usando Groq como reserva:', err);
       }
       if (allCleaned.length < 8) {
-        await runGroq(sampleSection(chunk1, 10_000), sampleSection(chunk2, 10_000));
+        await runGroq(sampleSection(chunk1, 8_000), sampleSection(chunk2, 8_000));
       }
     } else {
       await runGroq(chunk1, chunk2);
@@ -532,26 +570,34 @@ aiRoutes.post('/generate-questions', async (c) => {
 
     const limited = allCleaned.slice(0, quantity);
     const materialId = withText.length === 1 ? withText[0].id : null;
+    // Inserção em lote (1 query em vez de até 30 round-trips ao Neon).
+    const valuesSql: string[] = [];
+    const params: unknown[] = [];
     for (const q of limited) {
-      await query(
-        `insert into public.questions (user_id, subject_id, material_id, type, topic, prompt, options, answer, accept, pairs, explanation, difficulty)
-         values ($1, $2::uuid, $3::uuid, $4, $5, $6, $7::jsonb, $8, $9::jsonb, $10::jsonb, $11, $12)`,
-        [
-          user.id,
-          subjectId,
-          materialId,
-          q.type,
-          q.topic,
-          q.prompt,
-          q.options ? JSON.stringify(q.options) : null,
-          q.answer,
-          q.accept ? JSON.stringify(q.accept) : null,
-          q.pairs ? JSON.stringify(q.pairs) : null,
-          q.explanation,
-          q.difficulty,
-        ],
+      const base = params.length;
+      valuesSql.push(
+        `($${base + 1}, $${base + 2}::uuid, $${base + 3}::uuid, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}::jsonb, $${base + 8}, $${base + 9}::jsonb, $${base + 10}::jsonb, $${base + 11}, $${base + 12})`,
+      );
+      params.push(
+        user.id,
+        subjectId,
+        materialId,
+        q.type,
+        q.topic,
+        q.prompt,
+        q.options ? JSON.stringify(q.options) : null,
+        q.answer,
+        q.accept ? JSON.stringify(q.accept) : null,
+        q.pairs ? JSON.stringify(q.pairs) : null,
+        q.explanation,
+        q.difficulty,
       );
     }
+    await query(
+      `insert into public.questions (user_id, subject_id, material_id, type, topic, prompt, options, answer, accept, pairs, explanation, difficulty)
+       values ${valuesSql.join(', ')}`,
+      params,
+    );
 
     await query(`update public.materials set status = 'ready', error_message = null where subject_id = $1::uuid and user_id = $2`, [
       subjectId,
@@ -566,6 +612,9 @@ aiRoutes.post('/generate-questions', async (c) => {
     }
     if (err instanceof GroqError && err.status === 413) {
       return await fail('O material é grande demais para gerar de uma vez. Tente com um texto menor.', 413);
+    }
+    if (err instanceof GroqError && err.status === 408) {
+      return await fail('A IA demorou mais que o esperado para responder. Tente novamente em instantes.', 502);
     }
     console.error('generate-questions error:', err);
     return await fail('Não foi possível gerar as questões agora. Tente novamente em instantes.', 502);

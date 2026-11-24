@@ -1,6 +1,8 @@
 import { handle } from 'hono/vercel';
 import { app } from '../server/app.js';
 
+export const maxDuration = 60;
+
 const handler = handle(app);
 
 export const GET = handler;
