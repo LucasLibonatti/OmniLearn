@@ -46,8 +46,29 @@ export default function Profile() {
   const profile = useProfile();
   const { data: subjectsCached } = useSubjects();
   const { patchProfile } = useAppData();
-  const { theme, sound, reminder, toggleTheme, toggleSound, toggleReminder } = useSettings();
+  const { theme, sound, reminder, unlimitedPdf, toggleTheme, toggleSound, toggleReminder, setUnlimitedPdf } = useSettings();
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleToggleUnlimitedPdf = async () => {
+    if (unlimitedPdf) {
+      setUnlimitedPdf(false);
+      toast.info(tr('Limites padrão de PDF restaurados (20 MB / 30 páginas).'));
+      return;
+    }
+    const accepted = await confirmDialog({
+      title: tr('Termo para PDFs sem limite'),
+      message: tr(
+        'Ao enviar PDFs acima de 20 MB ou com mais de 30 páginas, a IA pode cometer erros, omitir partes do conteúdo ou perder contexto ao gerar questões e resumos.',
+      ),
+      note: tr(
+        'Arquivos muito grandes também podem exigir mais memória do navegador durante a leitura. Deseja assumir esse risco e liberar o envio sem limite?',
+      ),
+      confirmLabel: tr('Li e aceito'),
+    });
+    if (!accepted) return;
+    setUnlimitedPdf(true);
+    toast.success(tr('PDFs sem limite de tamanho e páginas ativados!'));
+  };
   const [goalInput, setGoalInput] = useState<string | null>(null);
   const [savingGoal, setSavingGoal] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -306,6 +327,19 @@ export default function Profile() {
             <p className="text-sm text-slate-500">{tr('Aviso às 19h se você ainda não bateu a meta.')}</p>
           </div>
           <Switch on={reminder} onChange={() => void toggleReminder()} label={tr('Lembrete diário')} />
+        </div>
+        <div className="flex items-center justify-between gap-3 py-3 border-t border-slate-100">
+          <div>
+            <p className="font-medium">{tr('PDFs sem limite de tamanho e páginas')}</p>
+            <p className="text-sm text-slate-500">
+              {tr('Permite enviar PDFs acima de 20 MB e 30 páginas mediante aceite de termo.')}
+            </p>
+          </div>
+          <Switch
+            on={unlimitedPdf}
+            onChange={() => void handleToggleUnlimitedPdf()}
+            label={tr('PDFs sem limite de tamanho e páginas')}
+          />
         </div>
         <div className="flex items-center justify-between gap-3 py-3 border-t border-slate-100">
           <div>

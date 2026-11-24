@@ -279,4 +279,21 @@ export const EN_PAGES: Record<string, string> = {
   "Matéria arquivada.": "Subject archived.",
   "Matéria reativada!": "Subject reactivated!",
   "Matéria excluída.": "Subject deleted.",
+  "PDFs sem limite de tamanho e páginas": "Unlimited PDF size and pages",
+  "Permite enviar PDFs acima de 20 MB e 30 páginas mediante aceite de termo.":
+    "Allows uploading PDFs over 20 MB and 30 pages after accepting the risk notice.",
+  "Termo para PDFs sem limite": "Unlimited PDF Terms",
+  "Ao enviar PDFs acima de 20 MB ou com mais de 30 páginas, a IA pode cometer erros, omitir partes do conteúdo ou perder contexto ao gerar questões e resumos.":
+    "When uploading PDFs larger than 20 MB or over 30 pages, the AI may make mistakes, omit parts of the content or lose context when generating questions and summaries.",
+  "Arquivos muito grandes também podem exigir mais memória do navegador durante a leitura. Deseja assumir esse risco e liberar o envio sem limite?":
+    "Very large files may also use more browser memory while reading. Do you accept this risk and want to unlock unlimited PDF uploads?",
+  "Li e aceito": "I understand and accept",
+  "PDFs sem limite de tamanho e páginas ativados!": "Unlimited PDF size and pages enabled!",
+  "Limites padrão de PDF restaurados (20 MB / 30 páginas).": "Default PDF limits restored (20 MB / 30 pages).",
+  "{name}: maior que 20 MB (você pode liberar PDFs sem limite em Perfil → Preferências)":
+    "{name}: larger than 20 MB (you can enable unlimited PDFs in Profile → Preferences)",
+  "1 arquivo por vez · PDF (sem limite de tamanho e páginas) ou PPTX (máx. {maxPptx} slides · até 20 MB)":
+    "1 file at a time · PDF (unlimited size & pages) or PPTX (max {maxPptx} slides · up to 20 MB)",
+  "Aviso: PDF acima de 20 MB ou 30 páginas — a IA analisará trechos distribuídos do arquivo e pode cometer imprecisões.":
+    "Notice: PDF exceeds 20 MB or 30 pages — the AI will sample distributed sections of the file and may introduce inaccuracies.",
 };

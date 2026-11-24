@@ -6,6 +6,7 @@ import { Generating, Spinner } from '../components/states';
 import { useAuth } from '../auth';
 import { useAsync } from '../hooks/useAsync';
 import { useAppData } from '../context/AppDataContext';
+import { useSettings } from '../hooks/useSettings';
 import { useI18n } from '../i18n';
 import { createSubject, getSubject } from '../services/subjects';
 import { countMaterials, saveMaterial } from '../services/materials';
@@ -40,6 +41,7 @@ export default function NewSubject() {
   const nav2 = useNavigate();
   const { session } = useAuth();
   const { reloadAllSubjects } = useAppData();
+  const { unlimitedPdf } = useSettings();
   const userId = session?.user.id;
 
   const existing = useAsync(() => (existingId ? getSubject(existingId) : Promise.resolve(null)), [existingId]);
@@ -66,14 +68,19 @@ export default function NewSubject() {
       setStatus(tr('{name}: só aceitamos PDF e PPTX', { name: f.name }));
       return;
     }
-    if (f.size > 20 * 1024 * 1024) {
-      setStatus(tr('{name}: maior que 20 MB', { name: f.name }));
+    const isPdf = f.name.toLowerCase().endsWith('.pdf');
+    if (f.size > 20 * 1024 * 1024 && !(isPdf && unlimitedPdf)) {
+      setStatus(
+        isPdf
+          ? tr('{name}: maior que 20 MB (você pode liberar PDFs sem limite em Perfil → Preferências)', { name: f.name })
+          : tr('{name}: maior que 20 MB', { name: f.name }),
+      );
       return;
     }
     setStatus('');
     setSelectedFile({ file: f, status: 'reading' });
     try {
-      const inspection = await inspectAndExtractFile(f);
+      const inspection = await inspectAndExtractFile(f, { unlimitedPdf });
       if (inspection.error) {
         setSelectedFile({ file: f, status: 'error', errorMsg: inspection.error, pageCount: inspection.pageCount });
       } else {
@@ -136,7 +143,7 @@ export default function NewSubject() {
         setEntries([{ name: file.name, status: 'reading' }]);
         const ex = selectedFile.extractedText
           ? { text: selectedFile.extractedText, pages: selectedFile.pageCount ?? 1, empty: selectedFile.extractedText.length < 200 }
-          : await extractText(file);
+          : await extractText(file, { unlimitedPdf });
         if (ex.empty) {
           updateEntry(0, { status: 'error', msg: tr('Sem texto legível') });
           throw new Error(tr('Não conseguimos ler texto suficiente neste arquivo (pode ser escaneado ou só com imagens).'));
@@ -264,10 +271,14 @@ export default function NewSubject() {
               <p className="font-bold mt-3">{tr('Arraste seu arquivo aqui')}</p>
               <p className="text-sm text-slate-500">{tr('ou clique para selecionar')}</p>
               <p className="text-xs text-slate-400 mt-2">
-                {tr('1 arquivo por vez · PDF (máx. {maxPdf} págs) ou PPTX (máx. {maxPptx} slides) · até 20 MB', {
-                  maxPdf: MAX_PDF_PAGES,
-                  maxPptx: MAX_PPTX_SLIDES,
-                })}
+                {unlimitedPdf
+                  ? tr('1 arquivo por vez · PDF (sem limite de tamanho e páginas) ou PPTX (máx. {maxPptx} slides · até 20 MB)', {
+                      maxPptx: MAX_PPTX_SLIDES,
+                    })
+                  : tr('1 arquivo por vez · PDF (máx. {maxPdf} págs) ou PPTX (máx. {maxPptx} slides) · até 20 MB', {
+                      maxPdf: MAX_PDF_PAGES,
+                      maxPptx: MAX_PPTX_SLIDES,
+                    })}
               </p>
               <input type="file" accept=".pdf,.pptx" className="sr-only" onChange={(e) => void add(e.target.files)} />
             </label>
@@ -327,6 +338,15 @@ export default function NewSubject() {
                 {selectedFile.status === 'error' && selectedFile.errorMsg && (
                   <p className="text-xs font-semibold text-red-600 mt-1">{selectedFile.errorMsg}</p>
                 )}
+                {selectedFile.status === 'ready' &&
+                  selectedFile.file.name.toLowerCase().endsWith('.pdf') &&
+                  (selectedFile.file.size > 20 * 1024 * 1024 || (selectedFile.pageCount ?? 0) > MAX_PDF_PAGES) && (
+                    <p className="text-xs font-semibold text-amber-700 mt-1.5">
+                      {tr(
+                        'Aviso: PDF acima de 20 MB ou 30 páginas — a IA analisará trechos distribuídos do arquivo e pode cometer imprecisões.',
+                      )}
+                    </p>
+                  )}
               </div>
               <button
                 onClick={removeFile}

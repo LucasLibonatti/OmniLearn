@@ -284,7 +284,7 @@ subjectsRoutes.post('/:id/materials', async (c) => {
     return c.json({ error: 'O conteúdo precisa ter pelo menos 200 caracteres.' }, 400);
   }
   const fileName = (body.file_name ?? 'Material').trim().slice(0, 160) || 'Material';
-  const pages = Math.max(1, Math.min(200, Math.round(Number(body.pages) || 1)));
+  const pages = Math.max(1, Math.min(50_000, Math.round(Number(body.pages) || 1)));
 
   const row = await queryOne(
     `insert into public.materials (user_id, subject_id, file_name, storage_path, pages, status, extracted_text, char_count)

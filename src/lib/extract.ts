@@ -4,6 +4,12 @@ import { tr } from '../i18n';
 
 export const MAX_PDF_PAGES = 30;
 export const MAX_PPTX_SLIDES = 40;
+/** Limite seguro de texto puro enviado ao backend para nunca exceder o payload de 4,5 MB da Vercel Serverless. */
+export const MAX_SAFE_TEXT_CHARS = 1_200_000;
+
+export interface ExtractOptions {
+  unlimitedPdf?: boolean;
+}
 
 export interface Extracted {
   text: string;
@@ -16,6 +22,19 @@ export interface FileInspection {
   pageCount: number;
   fileType: 'pdf' | 'pptx';
   error: string | null;
+}
+
+/** Amostra trechos uniformemente distribuídos caso o texto extraído ultrapasse o limite seguro de rede. */
+export function capExtractedText(text: string, maxChars = MAX_SAFE_TEXT_CHARS): string {
+  if (text.length <= maxChars) return text;
+  const segments = 10;
+  const perSeg = Math.floor(maxChars / segments) - 8;
+  const parts: string[] = [];
+  for (let i = 0; i < segments; i++) {
+    const start = i === segments - 1 ? text.length - perSeg : Math.round((i * (text.length - perSeg)) / (segments - 1));
+    parts.push(text.slice(start, start + perSeg).trim());
+  }
+  return parts.join('\n\n');
 }
 
 let pdfjsPromise: Promise<typeof import('pdfjs-dist')> | null = null;
@@ -40,10 +59,10 @@ function clean(raw: string): string {
     .trim();
 }
 
-export async function extractPdf(file: File): Promise<Extracted> {
+export async function extractPdf(file: File, opts?: ExtractOptions): Promise<Extracted> {
   const [pdfjs, data] = await Promise.all([loadPdfjs(), file.arrayBuffer()]);
   const doc = await pdfjs.getDocument({ data }).promise;
-  if (doc.numPages > MAX_PDF_PAGES) {
+  if (!opts?.unlimitedPdf && doc.numPages > MAX_PDF_PAGES) {
     throw new Error(
       tr(
         'Este arquivo possui {n} páginas. O limite máximo permitido é de {max} páginas por arquivo.',
@@ -51,14 +70,18 @@ export async function extractPdf(file: File): Promise<Extracted> {
       ),
     );
   }
-  let text = '';
+  const chunks: string[] = [];
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p);
     const content = await page.getTextContent();
     const line = content.items.map((it) => ('str' in it ? (it as { str: string }).str : '')).join(' ');
-    text += line + '\n\n';
+    chunks.push(line);
+    page.cleanup();
+    if (p % 25 === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
   }
-  const cleaned = clean(text);
+  const cleaned = capExtractedText(clean(chunks.join('\n\n')));
   return { text: cleaned, pages: doc.numPages, empty: cleaned.length < 200 };
 }
 
@@ -94,19 +117,19 @@ export async function extractPptx(file: File): Promise<Extracted> {
   return { text: cleaned, pages: slides.length, empty: cleaned.length < 200 };
 }
 
-export async function extractText(file: File): Promise<Extracted> {
+export async function extractText(file: File, opts?: ExtractOptions): Promise<Extracted> {
   const name = file.name.toLowerCase();
-  if (name.endsWith('.pdf')) return extractPdf(file);
+  if (name.endsWith('.pdf')) return extractPdf(file, opts);
   if (name.endsWith('.pptx')) return extractPptx(file);
   throw new Error(tr('Formato não suportado. Envie PDF ou PPTX.'));
 }
 
 /** Inspeciona e extrai o arquivo, retornando metadados para o card visual. */
-export async function inspectAndExtractFile(file: File): Promise<FileInspection> {
+export async function inspectAndExtractFile(file: File, opts?: ExtractOptions): Promise<FileInspection> {
   const name = file.name.toLowerCase();
   const fileType = name.endsWith('.pptx') ? 'pptx' : 'pdf';
   try {
-    const extracted = await extractText(file);
+    const extracted = await extractText(file, opts);
     return {
       text: extracted.text,
       pageCount: extracted.pages,
