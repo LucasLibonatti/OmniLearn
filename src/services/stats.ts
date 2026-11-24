@@ -1,7 +1,7 @@
 import { api } from '../lib/api';
 import { weekLabel } from '../lib/dates';
 import { tr } from '../i18n';
-import type { WeakSpot } from '../types';
+import type { StatusTone, WeakSpot } from '../types';
 
 export interface DayStat {
   date: string;
@@ -32,11 +32,11 @@ export interface StatsOverview {
   subjectPerformance: SubjectPerf[];
 }
 
-export function levelOf(acc: number): { level: string; dot: string } {
-  if (acc < 0.5) return { level: tr('Precisa revisar'), dot: '🔴' };
-  if (acc < 0.7) return { level: tr('Em desenvolvimento'), dot: '🟠' };
-  if (acc < 0.85) return { level: tr('Quase lá'), dot: '🟡' };
-  return { level: tr('Dominando'), dot: '🟢' };
+export function levelOf(acc: number): { level: string; tone: StatusTone } {
+  if (acc < 0.5) return { level: tr('Precisa revisar'), tone: 'rose' };
+  if (acc < 0.7) return { level: tr('Em desenvolvimento'), tone: 'amber' };
+  if (acc < 0.85) return { level: tr('Quase lá'), tone: 'yellow' };
+  return { level: tr('Dominando'), tone: 'emerald' };
 }
 
 export async function answeredToday(): Promise<number> {

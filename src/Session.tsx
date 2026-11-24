@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Check, X, Clock, Sparkles } from 'lucide-react';
+import { Check, X, Clock, Sparkles, GraduationCap, CheckCircle2, XCircle } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { Btn, Bar, Card, Select } from './ui';
 import { Icon } from './icons';
@@ -215,7 +215,7 @@ export default function Session() {
       <div className="min-h-screen grid place-items-center p-5">
         <div className="max-w-md w-full">
           <EmptyState
-            icon="✅"
+            icon={<Icon name="check3d" size={56} />}
             title={tr('Você já respondeu todas as questões desta sessão.')}
             action={
               <Btn onClick={finish} disabled={closing}>
@@ -254,10 +254,15 @@ export default function Session() {
         </span>
       </div>
 
-      <p className="mt-4 text-sm font-semibold text-slate-500">
-        {exam ? tr('🎓 Modo prova · ') : ''}
-        {subject?.name ?? tr('Sessão')} ·{' '}
-        {tr('Questão {n} de {total}', { n: Math.min(answered + (ok === null ? 1 : 0), total), total })} ·{' '}
+      <p className="mt-4 text-sm font-semibold text-slate-500 flex items-center flex-wrap gap-x-1.5">
+        {exam && (
+          <span className="inline-flex items-center gap-1 text-indigo-600 font-bold">
+            <GraduationCap size={16} />
+            {tr('Modo prova')} ·
+          </span>
+        )}
+        <span>{subject?.name ?? tr('Sessão')} ·</span>
+        <span>{tr('Questão {n} de {total}', { n: Math.min(answered + (ok === null ? 1 : 0), total), total })} ·</span>
         <span className="text-amber-600">{xp} XP</span>
       </p>
 
@@ -342,7 +347,10 @@ export default function Session() {
 
       {ok !== null && exam && (
         <Card className="pop mt-4 bg-indigo-50 border-indigo-200">
-          <p className="font-extrabold">{tr('✓ Resposta registrada.')}</p>
+          <p className="font-extrabold inline-flex items-center gap-1.5 text-indigo-700">
+            <CheckCircle2 size={18} />
+            {tr('Resposta registrada.')}
+          </p>
           <p className="text-sm text-slate-600 mt-1">{tr('No modo prova você vê o resultado só no final.')}</p>
           <Btn className="w-full mt-4" onClick={next} disabled={closing}>
             {secs > 0 && idx + 1 < qs.length ? tr('Continuar') : closing ? tr('Concluindo…') : tr('Ver resultado')}
@@ -352,7 +360,10 @@ export default function Session() {
 
       {ok !== null && !exam && (
         <Card className={`pop mt-4 ${ok ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-          <p className="font-extrabold">{ok ? tr('✓ Muito bem! Você acertou.') : tr('✕ Ainda não!')}</p>
+          <p className={`font-extrabold inline-flex items-center gap-1.5 ${ok ? 'text-emerald-700' : 'text-red-700'}`}>
+            {ok ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
+            {ok ? tr('Muito bem! Você acertou.') : tr('Ainda não!')}
+          </p>
           {!ok && (
             <p className="font-semibold">
               {tr('Resposta correta: ')}

@@ -234,6 +234,22 @@ export function initials(name: string): string {
   return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
 }
 
+import type { StatusTone } from './types';
+
+const DOT_CLS: Record<StatusTone, string> = {
+  rose: 'bg-rose-500 ring-rose-500/20',
+  amber: 'bg-amber-500 ring-amber-500/20',
+  yellow: 'bg-yellow-400 ring-yellow-400/25',
+  emerald: 'bg-emerald-500 ring-emerald-500/20',
+};
+
+export const StatusDot = ({ tone }: { tone: StatusTone }) => (
+  <span
+    aria-hidden
+    className={`inline-block w-2.5 h-2.5 rounded-full ring-4 shrink-0 ${DOT_CLS[tone]}`}
+  />
+);
+
 export function Avatar({
   name,
   src,

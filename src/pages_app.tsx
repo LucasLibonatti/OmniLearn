@@ -25,9 +25,14 @@ import {
   LifeBuoy,
   Download,
   AlertTriangle,
+  Paperclip,
+  PenLine,
+  GraduationCap,
+  CheckCircle2,
+  RotateCcw,
 } from 'lucide-react';
 import DOMPurify from 'dompurify';
-import { Avatar, Btn, Card, Bar, Ring, Logo } from './ui';
+import { Avatar, Btn, Card, Bar, Ring, Logo, StatusDot } from './ui';
 import { EmojiIcon, Icon, flameFor, type IconName } from './icons';
 import { EmptyState, ErrorState, Generating, Skeleton, Spinner } from './components/states';
 import { ConsentGate } from './components/ConsentGate';
@@ -399,8 +404,9 @@ export function Dashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-extrabold">
-          {greeting()}, {name} 👋
+        <h1 className="text-3xl font-extrabold inline-flex items-center gap-2">
+          <span>{greeting()}, {name}</span>
+          <Icon name="wave" size={32} />
         </h1>
         <p className="text-slate-600">{tr('Pronto para estudar hoje?')}</p>
       </div>
@@ -467,14 +473,20 @@ export function Dashboard() {
           {weak.loading ? (
             <Skeleton className="h-16 mt-3" />
           ) : (weak.data ?? []).length === 0 ? (
-            <p className="text-slate-600 text-sm mt-2">{tr('Nenhum ponto fraco por aqui. Continue assim! 💪')}</p>
+            <p className="text-slate-600 text-sm mt-2 inline-flex items-center gap-1.5">
+              <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+              {tr('Nenhum ponto fraco por aqui. Continue assim!')}
+            </p>
           ) : (
             <>
               <p className="text-slate-600 text-sm">{tr('Com base nas suas últimas respostas, recomendamos revisar:')}</p>
-              <ul className="my-4 space-y-2">
+              <ul className="my-4 space-y-2.5">
                 {(weak.data ?? []).slice(0, 3).map((w) => (
-                  <li key={w.topic} className="font-medium">
-                    {w.dot} {w.topic} <span className="text-slate-400 text-sm">{tr('({n} de {of} erradas)', { n: w.wrong, of: w.of })}</span>
+                  <li key={w.topic} className="font-medium flex items-center gap-2.5">
+                    <StatusDot tone={w.tone} />
+                    <span>
+                      {w.topic} <span className="text-slate-400 text-sm">{tr('({n} de {of} erradas)', { n: w.wrong, of: w.of })}</span>
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -953,9 +965,10 @@ export function NewSubject() {
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`flex-1 rounded-2xl px-4 py-3 font-semibold border-2 ${mode === m ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'}`}
+            className={`flex-1 inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 font-semibold border-2 transition ${mode === m ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'}`}
           >
-            {m === 'file' ? tr('📎 Enviar arquivo') : tr('✍️ Colar texto')}
+            {m === 'file' ? <Paperclip size={17} /> : <PenLine size={17} />}
+            {m === 'file' ? tr('Enviar arquivo') : tr('Colar texto')}
           </button>
         ))}
       </div>
@@ -1188,7 +1201,10 @@ export function Configure() {
             className="mt-1 w-5 h-5 accent-indigo-600"
           />
           <div>
-            <p className="font-bold">{tr('🎓 Modo prova')}</p>
+            <p className="font-bold inline-flex items-center gap-1.5">
+              <GraduationCap size={18} className="text-indigo-600" />
+              {tr('Modo prova')}
+            </p>
             <p className="text-sm text-slate-600">{tr('No modo prova você responde sem ver se acertou, como uma prova de verdade. O resultado aparece só no final.')}</p>
           </div>
         </label>
@@ -1263,11 +1279,32 @@ export function Result() {
       <div className="grid sm:grid-cols-2 gap-3 text-left">
         <Card>
           <h2 className="font-bold">{tr('Você mandou bem em:')}</h2>
-          {good.length ? good.slice(0, 4).map((t) => <p key={t.topic} className="mt-2">🟢 {t.topic}</p>) : <p className="text-sm text-slate-500 mt-2">—</p>}
+          {good.length ? (
+            good.slice(0, 4).map((t) => (
+              <p key={t.topic} className="mt-2.5 flex items-center gap-2.5 font-medium">
+                <StatusDot tone="emerald" />
+                <span>{t.topic}</span>
+              </p>
+            ))
+          ) : (
+            <p className="text-sm text-slate-500 mt-2">—</p>
+          )}
         </Card>
         <Card>
           <h2 className="font-bold">{tr('Vale revisar:')}</h2>
-          {bad.length ? bad.slice(0, 4).map((t) => <p key={t.topic} className="mt-2">🔴 {t.topic}</p>) : <p className="text-sm text-slate-500 mt-2">{tr('Nada para revisar. 👏')}</p>}
+          {bad.length ? (
+            bad.slice(0, 4).map((t) => (
+              <p key={t.topic} className="mt-2.5 flex items-center gap-2.5 font-medium">
+                <StatusDot tone="rose" />
+                <span>{t.topic}</span>
+              </p>
+            ))
+          ) : (
+            <p className="text-sm text-slate-500 mt-2 inline-flex items-center gap-1.5">
+              <CheckCircle2 size={15} className="text-emerald-500" />
+              {tr('Nada para revisar.')}
+            </p>
+          )}
         </Card>
       </div>
       {achievements.length > 0 && (
@@ -1326,7 +1363,7 @@ export function Review() {
       ) : weak.error ? (
         <ErrorState message={weak.error} onRetry={weak.reload} />
       ) : (weak.data ?? []).length === 0 ? (
-        <EmptyState icon="🎉" title={tr('Nenhum erro recente!')} desc={tr('Continue praticando para manter o ritmo.')} action={<Btn to="/dashboard">{tr('Voltar')}</Btn>} />
+        <EmptyState icon={<Icon name="party" size={56} />} title={tr('Nenhum erro recente!')} desc={tr('Continue praticando para manter o ritmo.')} action={<Btn to="/dashboard">{tr('Voltar')}</Btn>} />
       ) : (
         (weak.data ?? []).map((w) => (
           <Card key={w.topic} className="flex items-center gap-4 flex-wrap">
@@ -1335,8 +1372,8 @@ export function Review() {
               <p className="text-slate-600 text-sm">
                 {tr('Você errou {n} de {of} questões.', { n: w.wrong, of: w.of })}
               </p>
-              <p className="text-sm font-semibold mt-1">
-                {w.dot} {tr('Nível')}: {w.level}
+              <p className="text-sm font-semibold mt-1.5 inline-flex items-center gap-2">
+                <StatusDot tone={w.tone} /> {tr('Nível')}: {w.level}
               </p>
             </div>
             <Btn onClick={() => practice(w.topic, w.subject_id)} disabled={busy === w.topic}>
@@ -1446,12 +1483,16 @@ export function Stats() {
           <h2 className="font-bold">{tr('Continue praticando')}</h2>
           {weak.length ? (
             weak.slice(0, 4).map((w) => (
-              <p key={w.topic} className="mt-2">
-                {w.dot} {w.topic}
+              <p key={w.topic} className="mt-2.5 flex items-center gap-2.5 font-medium">
+                <StatusDot tone={w.tone} />
+                <span>{w.topic}</span>
               </p>
             ))
           ) : (
-            <p className="text-sm text-slate-500 mt-2">{tr('Nada aqui. 👏')}</p>
+            <p className="text-sm text-slate-500 mt-2 inline-flex items-center gap-1.5">
+              <CheckCircle2 size={15} className="text-emerald-500" />
+              {tr('Nada aqui.')}
+            </p>
           )}
         </Card>
       </div>
@@ -1848,9 +1889,9 @@ export function Flashcards() {
     return (
       <div className="max-w-xl">
         <EmptyState
-          icon="🎯"
+          icon={<Icon name="alvo" size={56} />}
           title={cards.length === 0 ? tr('Nenhum flashcard por aqui ainda') : tr('Você revisou todos os flashcards de hoje!')}
-          desc={cards.length === 0 ? tr('Resolva sessões para os flashcards aparecerem.') : tr('Volte amanhã para revisar de novo. 🗓️')}
+          desc={cards.length === 0 ? tr('Resolva sessões para os flashcards aparecerem.') : tr('Volte amanhã para revisar de novo.')}
           action={<Btn onClick={() => nav2('/dashboard')}>{tr('Voltar ao início')}</Btn>}
         />
       </div>
@@ -1860,7 +1901,10 @@ export function Flashcards() {
   return (
     <div className="max-w-xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold">🃏 Flashcards</h1>
+        <h1 className="text-2xl font-extrabold inline-flex items-center gap-2">
+          <Layers size={24} className="text-indigo-600" />
+          Flashcards
+        </h1>
         <span className="text-sm font-semibold text-slate-500">
           {tr('{n} de {total}', { n: idx + 1, total: cards.length })}
         </span>
@@ -1899,18 +1943,24 @@ export function Flashcards() {
       {show && !result && (
         <div className="flex gap-3">
           <Btn v="s" className="flex-1" onClick={() => grade(false)} disabled={grading}>
-            😅 {tr('Errei')}
+            <RotateCcw size={16} /> {tr('Errei')}
           </Btn>
           <Btn className="flex-1" onClick={() => grade(true)} disabled={grading}>
-            😎 {tr('Acertei')}
+            <CheckCircle2 size={16} /> {tr('Acertei')}
           </Btn>
         </div>
       )}
 
       {result && (
         <div className="space-y-3">
-          <p className="text-center text-sm font-semibold text-slate-600">
-            {result.xp_gained > 0 ? tr('+{n} XP 🎉 ', { n: result.xp_gained }) : ''}{tr('caixa {n} de 5', { n: result.box })}
+          <p className="text-center text-sm font-semibold text-slate-600 flex items-center justify-center gap-1.5">
+            {result.xp_gained > 0 && (
+              <>
+                <Icon name="party" size={18} />
+                <span className="font-bold text-amber-600">+{result.xp_gained} XP</span> ·
+              </>
+            )}
+            <span>{tr('caixa {n} de 5', { n: result.box })}</span>
           </p>
           <Btn className="w-full" onClick={next}>
             {idx + 1 < cards.length ? tr('Próximo') : tr('Concluir')}

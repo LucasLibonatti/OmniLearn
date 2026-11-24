@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { Bar, Btn, Card } from '../ui';
 import { useI18n } from '../i18n';
 
@@ -46,8 +47,10 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
   const { tr } = useI18n();
   return (
     <Card className="text-center">
-      <p className="text-2xl">⚠️</p>
-      <p className="font-semibold text-slate-700 mt-2">{tr('Algo deu errado')}</p>
+      <div className="mx-auto w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 grid place-items-center">
+        <AlertTriangle size={24} />
+      </div>
+      <p className="font-semibold text-slate-700 mt-3">{tr('Algo deu errado')}</p>
       <p className="text-sm text-slate-500 mt-1">{message}</p>
       {onRetry && (
         <Btn className="mt-4" onClick={onRetry}>

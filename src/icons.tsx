@@ -12,6 +12,10 @@ import fogo1 from '../Icons/Fogo1Dia.webp';
 import fogo15 from '../Icons/Fogo15Dias.webp';
 import fogo30 from '../Icons/Fogo30Dias.webp';
 import chat from '../Icons/balao de chat.webp';
+import brain from '../Icons/brain.webp';
+import party from '../Icons/party.webp';
+import wave from '../Icons/wave.webp';
+import check3d from '../Icons/check3d.webp';
 import mascoteClaro from '../Icons/site inicio/claro.webp';
 import mascoteEscuro from '../Icons/site inicio/escuro.webp';
 
@@ -28,6 +32,10 @@ export const iconSrc = {
   fogo15,
   fogo30,
   chat,
+  brain,
+  party,
+  wave,
+  check3d,
 } as const;
 
 /** Arte do mascote de acordo com o tema ativo (versões "claro" e "escuro"). */
@@ -82,6 +90,9 @@ const EMOJI_TO_ICON: Record<string, IconName> = {
   '🚀': 'foguete',
   '👑': 'coroa',
   '🎯': 'alvo',
+  '🧠': 'brain',
+  '🎉': 'party',
+  '✅': 'check3d',
 };
 
 /** Renderiza um ícone 3D a partir de um emoji (usado nas conquistas). */

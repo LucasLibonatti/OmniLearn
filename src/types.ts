@@ -75,13 +75,15 @@ export interface Achievement {
   unlocked_at: string | null;
 }
 
+export type StatusTone = 'rose' | 'amber' | 'yellow' | 'emerald';
+
 export interface WeakSpot {
   topic: string;
   subject_id: string;
   wrong: number;
   of: number;
   level: string;
-  dot: string;
+  tone: StatusTone;
 }
 
 export interface SubjectStats {
