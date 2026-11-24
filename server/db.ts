@@ -9,8 +9,20 @@ export function getPool(): Pool {
     throw new Error('Variável de ambiente DATABASE_URL não configurada.');
   }
   const isLocal = url.includes('localhost') || url.includes('127.0.0.1');
+  // Remove sslmode da query string quando configuramos `ssl` explicitamente na Pool,
+  // evitando o SECURITY WARNING do pg 8.x nos logs da Vercel.
+  let connectionString = url;
+  if (!isLocal) {
+    try {
+      const parsed = new URL(url);
+      parsed.searchParams.delete('sslmode');
+      connectionString = parsed.toString();
+    } catch {
+      connectionString = url.replace(/([?&])sslmode=[^&]*(&?)/i, (_, p1, p2) => (p1 === '?' && p2 ? '?' : p2 ? p1 : ''));
+    }
+  }
   pool = new Pool({
-    connectionString: url,
+    connectionString,
     ssl: isLocal ? undefined : { rejectUnauthorized: false },
     max: 5,
     idleTimeoutMillis: 15_000,
