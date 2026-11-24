@@ -250,6 +250,8 @@ class GroqError extends Error {
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const NVIDIA_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
+const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b';
+const GROQ_FALLBACK_MODELS = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b'];
 
 /** Remove bytes nulos, controles inválidos e surrogates UTF-16 órfãos de textos extraídos de PDFs. */
 function sanitizeForApi(s: string): string {
@@ -316,6 +318,15 @@ async function callGroq(opts: {
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
     console.error(`${providerLabel} error ${res.status}:`, errText.slice(0, 500));
+    // Se um modelo legado (ex.: llama-3.3-70b-versatile) retornar 404 na Groq, tenta automaticamente os modelos ativos.
+    if (!isNvidia && res.status === 404) {
+      const idx = GROQ_FALLBACK_MODELS.indexOf(opts.model);
+      const nextModel = idx === -1 ? GROQ_FALLBACK_MODELS[0] : GROQ_FALLBACK_MODELS[idx + 1];
+      if (nextModel && nextModel !== opts.model) {
+        console.warn(`Groq modelo "${opts.model}" indisponível (404). Usando fallback "${nextModel}".`);
+        return callGroq({ ...opts, model: nextModel });
+      }
+    }
     // Groq frequentemente retorna 400 (json_validate_failed) em PDFs densos quando jsonMode está ligado.
     // Reexecuta 1 vez sem response_format e deixa parseQuestions extrair o JSON.
     if (!isNvidia && res.status === 400 && opts.jsonMode) {
@@ -382,7 +393,7 @@ export const aiRoutes = new Hono<AppEnv>();
 aiRoutes.post('/generate-questions', async (c) => {
   const user = c.get('user');
   const GROQ_API_KEY = process.env.GROQ_API_KEY;
-  const MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+  const MODEL = process.env.GROQ_MODEL || DEFAULT_GROQ_MODEL;
   const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
   const NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'meta/llama-3.3-70b-instruct';
   /** Acima disso (~30 páginas de texto) o material é considerado "PDF grande". */
@@ -624,7 +635,7 @@ aiRoutes.post('/generate-questions', async (c) => {
 aiRoutes.post('/tools', async (c) => {
   const user = c.get('user');
   const GROQ_API_KEY = process.env.GROQ_API_KEY;
-  const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+  const GROQ_MODEL = process.env.GROQ_MODEL || DEFAULT_GROQ_MODEL;
   const AI_DAILY_LIMIT = Number(process.env.AI_DAILY_LIMIT || '30');
   const MAX_CHARS = Number(process.env.AI_MAX_INPUT_CHARS || '6000');
 

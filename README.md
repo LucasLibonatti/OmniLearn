@@ -40,7 +40,7 @@ flowchart LR
 - **Backend Serverless:** **Hono** em um único entrypoint na Vercel (`api/index.ts`), rodando localmente em paralelo ao Vite.
 - **Autenticação:** **Better Auth** (e-mail/senha + Google OAuth) com sessão via cookie `HttpOnly` persistida no PostgreSQL.
 - **Banco de Dados:** **Neon PostgreSQL Serverless** com funções PL/pgSQL atômicas (`start_session`, `record_answer`, `complete_session`, `review_flashcard`) e *scale-to-zero* sem pausas manuais por inatividade.
-- **Inteligência Artificial:** **Groq API** (`llama-3.3-70b-versatile`) executada exclusivamente no servidor, com controle de cota diária por usuário.
+- **Inteligência Artificial:** **Groq API** (`openai/gpt-oss-120b`) executada exclusivamente no servidor, com controle de cota diária por usuário e suporte opcional à **NVIDIA NIM** para PDFs grandes.
 
 ---
 
